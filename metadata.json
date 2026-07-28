@@ -1,0 +1,8 @@
+{
+  "name": "MenuFlow",
+  "description": "MenuFlow management application",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
