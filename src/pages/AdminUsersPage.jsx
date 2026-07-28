@@ -3,12 +3,13 @@ import { useEffect, useState } from 'react';
 import { 
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
   Paper, Switch, Button, Dialog, DialogTitle, DialogContent, DialogActions, 
-  FormControlLabel, Checkbox, Stack, CircularProgress
+  FormControlLabel, Checkbox, Stack, CircularProgress, ToggleButtonGroup, ToggleButton
 } from '@mui/material';
 import axiosClient from '../api/axiosClient.js';
 import AdminLayout from '../components/layout/AdminLayout.jsx';
 import { useSnackbar } from 'notistack';
 import AdminNav from '../components/admin/AdminNav.jsx';
+import PermissionsMatrix from '../components/admin/PermissionsMatrix.jsx';
 
 function ModulesDialog({ open, onClose, user, allModules, onSave }) {
   const [selected, setSelected] = useState([]);
@@ -61,6 +62,7 @@ function AdminUsersPage() {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [vue, setVue] = useState('liste'); // 'liste' | 'matrice'
   const { enqueueSnackbar } = useSnackbar();
 
   const loadData = async () => {
@@ -116,13 +118,44 @@ function AdminUsersPage() {
     }
   };
 
+  // Utilisé par la matrice : bascule un seul module pour un utilisateur,
+  // mise à jour optimiste + persistance immédiate, sans fermer de dialog.
+  const toggleModuleDansMatrice = async (user, moduleId, coche) => {
+    const actuels = user.modulesVisiblesIds || [];
+    const nouveaux = coche ? [...actuels, moduleId] : actuels.filter(id => id !== moduleId);
+
+    setUsers(prev => prev.map(u => u.id === user.id ? { ...u, modulesVisiblesIds: nouveaux } : u));
+    try {
+      await axiosClient.patch(`/admin/utilisateurs/${user.id}/modules-visibles`, { moduleIds: nouveaux });
+    } catch (e) {
+      // rollback en cas d'échec
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, modulesVisiblesIds: actuels } : u));
+      console.error(e);
+    }
+  };
+
   return (
     <AdminLayout>
       <Box sx={{ pb: 6 }}>
         
         <AdminNav />
+
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <ToggleButtonGroup
+            size="small"
+            value={vue}
+            exclusive
+            onChange={(e, v) => v && setVue(v)}
+          >
+            <ToggleButton value="liste">Liste</ToggleButton>
+            <ToggleButton value="matrice">Matrice des permissions</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
         {loading ? (
           <CircularProgress />
+        ) : vue === 'matrice' ? (
+          <PermissionsMatrix users={users} modules={modules} onToggle={toggleModuleDansMatrice} />
         ) : (
           <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
             <Table>

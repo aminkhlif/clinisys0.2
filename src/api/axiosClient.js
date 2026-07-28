@@ -1,21 +1,13 @@
 // src/api/axiosClient.js
 import axios from 'axios';
 import { enqueueSnackbar } from 'notistack';
-import { handleMockRequest } from './mockBackend.js';
 
 const axiosClient = axios.create({
-  baseURL: '/api',
+  baseURL: 'http://localhost:8081/api',
   headers: {
     'Content-Type': 'application/json',
   },
   withCredentials: true,
-  adapter: async (config) => {
-    try {
-      return await handleMockRequest(config);
-    } catch (err) {
-      return Promise.reject(err);
-    }
-  },
 });
 
 let onEchecAuthentification = () => {};

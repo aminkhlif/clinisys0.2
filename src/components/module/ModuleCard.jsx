@@ -63,7 +63,7 @@ function ModuleCard({ module, onOuvrir, onEdit, onDelete, misEnAvant = false }) 
     <Card
       sx={{
         position: 'relative',
-        height: 160,
+        minHeight: 160,
         display: 'flex',
         flexDirection: 'column',
         transition: 'border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease',
@@ -121,7 +121,7 @@ function ModuleCard({ module, onOuvrir, onEdit, onDelete, misEnAvant = false }) 
           />
         </Stack>
 
-        <Box sx={{ flex: 1, minHeight: 0, mt: 1.5, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Box sx={{ flex: 1, minHeight: 0, mt: 1.5, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
           <Typography
             variant="subtitle1"
             title={module.nom}
