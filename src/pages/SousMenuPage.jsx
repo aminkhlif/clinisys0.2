@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Box, Stack, Typography, Button, TextField, InputAdornment, Chip, Skeleton,
+  Box, Stack, Typography, Button, TextField, InputAdornment, Chip, Skeleton, TablePagination,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -25,6 +25,11 @@ function SousMenuPage() {
   const [chargementImages, setChargementImages] = useState(true);
   const [selectionnees, setSelectionnees] = useState([]);
   const [recherche, setRecherche] = useState('');
+  
+  // Pagination
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [totalElements, setTotalElements] = useState(0);
 
   const [dialogUploadOuvert, setDialogUploadOuvert] = useState(false);
   const [imageDetail, setImageDetail] = useState(null);
@@ -40,9 +45,24 @@ function SousMenuPage() {
   const chargerImages = async (termeRecherche = '') => {
     setChargementImages(true);
     try {
-      const params = termeRecherche ? { sousMenuId, description: termeRecherche } : { sousMenuId };
+      const params = { 
+        sousMenuId, 
+        page,
+        taille: rowsPerPage,
+        ...(termeRecherche ? { description: termeRecherche } : {})
+      };
       const res = await axiosClient.get('/images', { params });
-      setImages(res.data);
+      
+      // Handle both paginated and non-paginated responses
+      if (res.data.content) {
+        // Paginated response
+        setImages(res.data.content);
+        setTotalElements(res.data.totalElements || res.data.content.length);
+      } else {
+        // Non-paginated response (fallback)
+        setImages(res.data);
+        setTotalElements(res.data.length);
+      }
     } finally {
       setChargementImages(false);
     }
@@ -52,16 +72,34 @@ function SousMenuPage() {
     if (!sousMenuId) return;
     setSelectionnees([]);
     setRecherche('');
+    setPage(0);
     chargerSousMenu();
     chargerImages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sousMenuId]);
 
   useEffect(() => {
     const delai = setTimeout(() => {
+      setPage(0);
       chargerImages(recherche);
     }, 300);
     return () => clearTimeout(delai);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recherche]);
+
+  useEffect(() => {
+    chargerImages(recherche);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, rowsPerPage]);
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   const confirmerSuppressionSelectionnees = async () => {
     setSuppressionEnCours(true);
@@ -240,14 +278,33 @@ function SousMenuPage() {
           </Typography>
         </Box>
       ) : (
-        <ImageGrid
-          images={images}
-          selectionnees={selectionnees}
-          onChangerSelection={setSelectionnees}
-          onReordonne={setImages}
-          onOuvrirDetail={setImageDetail}
-          onOuvrirActions={(img) => navigate(`/modules/${moduleId}/sous-menus/${sousMenuId}/images/${img.id}`)}
-        />
+        <>
+          <ImageGrid
+            images={images}
+            selectionnees={selectionnees}
+            onChangerSelection={setSelectionnees}
+            onReordonne={setImages}
+            onOuvrirDetail={setImageDetail}
+            onOuvrirActions={(img) => navigate(`/modules/${moduleId}/sous-menus/${sousMenuId}/images/${img.id}`)}
+          />
+          
+          {/* Pagination */}
+          {!chargementImages && images.length > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+              <TablePagination
+                component="div"
+                count={totalElements}
+                page={page}
+                onPageChange={handleChangePage}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                rowsPerPageOptions={[12, 20, 48]}
+                labelRowsPerPage="Images par page:"
+                labelDisplayedRows={({ from, to, count }) => `${from}-${to} sur ${count !== -1 ? count : `plus de ${to}`}`}
+              />
+            </Box>
+          )}
+        </>
       )}
 
       <ImageUploadDialog

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box, Stack, Typography, Button, TextField, InputAdornment, Grid, Skeleton, ToggleButtonGroup, ToggleButton, Drawer
+  Box, Stack, Typography, Button, TextField, InputAdornment, Grid, Skeleton, ToggleButtonGroup, ToggleButton, Drawer, TablePagination
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -25,6 +25,11 @@ function ModulesPage() {
   const boutonNouveauModuleRef = useRef(null);
   const [chargement, setChargement] = useState(true);
   const [recherche, setRecherche] = useState('');
+  
+  // Pagination
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [totalElements, setTotalElements] = useState(0);
 
   const [dialogOuvert, setDialogOuvert] = useState(false);
   const [moduleEnEdition, setModuleEnEdition] = useState(null);
@@ -37,24 +42,41 @@ function ModulesPage() {
   const chargerModules = useCallback(async (termeRecherche = '') => {
     setChargement(true);
     try {
-      const params = termeRecherche ? { recherche: termeRecherche } : {};
+      const params = {
+        page,
+        taille: rowsPerPage,
+        recherche: termeRecherche || undefined
+      };
       const res = await axiosClient.get('/modules', { params });
-      setModules(res.data);
+      setModules(res.data.content || res.data);
+      setTotalElements(res.data.totalElements || res.data.length);
     } catch {
       enqueueSnackbar('Impossible de charger les modules', { variant: 'error' });
     } finally {
       setChargement(false);
     }
-  }, [enqueueSnackbar]);
+  }, [enqueueSnackbar, page, rowsPerPage]);
 
   useEffect(() => {
     chargerModules();
   }, [chargerModules]);
 
   useEffect(() => {
-    const delai = setTimeout(() => chargerModules(recherche), 300);
+    const delai = setTimeout(() => {
+      setPage(0);
+      chargerModules(recherche);
+    }, 300);
     return () => clearTimeout(delai);
   }, [recherche, chargerModules]);
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   const ouvrirCreation = () => {
     setModuleEnEdition(null);
@@ -297,6 +319,23 @@ function ModulesPage() {
               </Grid>
             ))}
           </Grid>
+        )}
+        
+        {/* Pagination */}
+        {!chargement && modules.length > 0 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <TablePagination
+              component="div"
+              count={totalElements}
+              page={page}
+              onPageChange={handleChangePage}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              rowsPerPageOptions={[12, 20, 48]}
+              labelRowsPerPage="Modules par page:"
+              labelDisplayedRows={({ from, to, count }) => `${from}-${to} sur ${count !== -1 ? count : `plus de ${to}`}`}
+            />
+          </Box>
         )}
       </Box>
 

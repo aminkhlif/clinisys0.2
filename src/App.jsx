@@ -10,6 +10,7 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import AdminDashboardPage from './pages/AdminDashboardPage.jsx';
 import AdminUsersPage from './pages/AdminUsersPage.jsx';
 import AdminJournalPage from './pages/AdminJournalPage.jsx';
+import AdminPermissionsMatrixPage from './pages/AdminPermissionsMatrixPage.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
 import AdminRoute from './components/auth/AdminRoute.jsx';
@@ -68,6 +69,7 @@ function App() {
         {/* Routes d'administration */}
         <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
         <Route path="/admin/utilisateurs" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+        <Route path="/admin/permissions" element={<AdminRoute><AdminPermissionsMatrixPage /></AdminRoute>} />
         <Route path="/admin/journal" element={<AdminRoute><AdminJournalPage /></AdminRoute>} />
       </Routes>
     </AuthProvider>

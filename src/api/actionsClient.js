@@ -14,7 +14,7 @@ export const supprimerAction = (actionId) =>
   axiosClient.delete(`/actions/${actionId}`);
 
 export const validerActions = (imageId) =>
-  axiosClient.post(`/actions/images/${imageId}/valider`);
+  axiosClient.post(`/actions/images/${imageId}/valider`).then((res) => res.data);
 
 export const annulerActions = (imageId) =>
   axiosClient.delete(`/actions/images/${imageId}/annuler`);

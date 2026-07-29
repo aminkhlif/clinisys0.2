@@ -279,8 +279,9 @@ function ImageEditPage() {
       }
       await axiosClient.patch(`/images/${image.id}/description`, null, { params: { description } });
 
+      let imageMiseAJour = null;
       if (actions.length > 0) {
-        await validerActions(image.id);
+        imageMiseAJour = await validerActions(image.id);
       }
 
       enqueueSnackbar('Modifications enregistrées', { variant: 'success' });
@@ -288,8 +289,15 @@ function ImageEditPage() {
       setActionSelectionneeId(null);
       setVientDeSauvegarder(true);
       setTimeout(() => setVientDeSauvegarder(false), 1600);
-      await chargerImage();
-      await chargerActions();
+      
+      // Utiliser l'image mise à jour retournée par validerActions si disponible
+      if (imageMiseAJour) {
+        setImage(imageMiseAJour);
+        await chargerActions();
+      } else {
+        await chargerImage();
+        await chargerActions();
+      }
     } catch (err) {
       setErreur(err.response?.data?.description || 'Une erreur est survenue');
     } finally {
