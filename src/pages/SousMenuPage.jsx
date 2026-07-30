@@ -61,10 +61,14 @@ function SousMenuPage() {
         // Paginated response
         setImages(res.data.content);
         setTotalElements(res.data.totalElements || res.data.content.length);
-      } else {
+      } else if (Array.isArray(res.data)) {
         // Non-paginated response (fallback)
         setImages(res.data);
         setTotalElements(res.data.length);
+      } else {
+        console.error('Format de réponse inattendu:', res.data);
+        setImages([]);
+        setTotalElements(0);
       }
     } catch (error) {
       console.error('Erreur chargement images:', error);
@@ -97,9 +101,7 @@ function SousMenuPage() {
 
   // Re-load when pagination changes
   useEffect(() => {
-    if (page !== 0 || rowsPerPage !== 20) {
-      chargerImages(recherche, page, rowsPerPage);
-    }
+    chargerImages(recherche, page, rowsPerPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, rowsPerPage]);
 
