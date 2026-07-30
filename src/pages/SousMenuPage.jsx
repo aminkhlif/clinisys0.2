@@ -42,14 +42,17 @@ function SousMenuPage() {
     setSousMenu(res.data);
   };
 
-  const chargerImages = async (termeRecherche = '') => {
+  const chargerImages = async (termeRecherche = '', currentPage = page, currentRowsPerPage = rowsPerPage) => {
     setChargementImages(true);
     try {
+      // Normaliser le terme de recherche
+      const termeNormalise = termeRecherche.trim();
+      
       const params = { 
         sousMenuId, 
-        page,
-        taille: rowsPerPage,
-        ...(termeRecherche ? { description: termeRecherche } : {})
+        page: currentPage,
+        taille: currentRowsPerPage,
+        ...(termeNormalise ? { description: termeNormalise } : {})
       };
       const res = await axiosClient.get('/images', { params });
       
@@ -63,32 +66,40 @@ function SousMenuPage() {
         setImages(res.data);
         setTotalElements(res.data.length);
       }
+    } catch (error) {
+      console.error('Erreur chargement images:', error);
+      enqueueSnackbar('Erreur lors de la recherche d\'images', { variant: 'error' });
     } finally {
       setChargementImages(false);
     }
   };
 
+  // Initial load only
   useEffect(() => {
     if (!sousMenuId) return;
     setSelectionnees([]);
     setRecherche('');
     setPage(0);
     chargerSousMenu();
-    chargerImages();
+    chargerImages('', 0, rowsPerPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sousMenuId]);
 
+  // Re-load when search changes
   useEffect(() => {
     const delai = setTimeout(() => {
       setPage(0);
-      chargerImages(recherche);
+      chargerImages(recherche, 0, rowsPerPage);
     }, 300);
     return () => clearTimeout(delai);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recherche]);
 
+  // Re-load when pagination changes
   useEffect(() => {
-    chargerImages(recherche);
+    if (page !== 0 || rowsPerPage !== 20) {
+      chargerImages(recherche, page, rowsPerPage);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, rowsPerPage]);
 
@@ -202,7 +213,7 @@ function SousMenuPage() {
         </Stack>
       </Box>
 
-      {/* Barre d'outils (Filtres & Actions) */}
+      {/* Barre d'outils (Filtres & Actions) - Sticky */}
       <Box sx={{ 
         mb: 3, 
         display: 'flex', 
@@ -214,7 +225,11 @@ function SousMenuPage() {
         p: 2, 
         borderRadius: 2, 
         border: '1px solid', 
-        borderColor: 'divider' 
+        borderColor: 'divider',
+        position: 'sticky',
+        top: { xs: 56, sm: 64 },
+        zIndex: 100,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
       }}>
         <TextField
           size="small"

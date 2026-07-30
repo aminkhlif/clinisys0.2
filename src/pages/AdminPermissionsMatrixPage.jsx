@@ -38,7 +38,6 @@ function AdminPermissionsMatrixPage() {
       const res = await axiosClient.get('/admin/permissions/matrice', { params });
       setMatrix(res.data);
     } catch (e) {
-      console.error(e);
       enqueueSnackbar('Erreur lors du chargement de la matrice', { variant: 'error' });
     } finally {
       setLoading(false);

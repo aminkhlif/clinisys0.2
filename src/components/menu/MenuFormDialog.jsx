@@ -19,7 +19,8 @@ function MenuFormDialog({ ouvert, menu, moduleId, onFermer, onSauvegarde }) {
   const [enCours, setEnCours] = useState(false);
 
   useEffect(() => {
-    setNom(menu ? menu.nom : '');
+    console.log('MenuFormDialog - menu reçu:', menu);
+    setNom(menu?.nom || '');
     setErreur('');
   }, [menu, ouvert]);
 
@@ -31,13 +32,17 @@ function MenuFormDialog({ ouvert, menu, moduleId, onFermer, onSauvegarde }) {
     setEnCours(true);
     try {
       if (menu) {
-        await axiosClient.put(`/menus/${menu.id}`, { nom });
+        console.log('Modification menu:', menu.id, 'nouveau nom:', nom);
+        await axiosClient.put(`/menus/${menu.id}`, { nom, moduleId: menu.moduleId });
       } else {
+        console.log('Création menu:', nom, 'moduleId:', moduleId);
         await axiosClient.post('/menus', { nom, moduleId });
       }
       onSauvegarde();
     } catch (err) {
-      setErreur(err.response?.data?.nom || 'Une erreur est survenue');
+      console.error('Erreur sauvegarde menu:', err);
+      console.error('Response data:', err?.response?.data);
+      setErreur(err.response?.data?.message || err.response?.data?.nom || 'Une erreur est survenue');
     } finally {
       setEnCours(false);
     }

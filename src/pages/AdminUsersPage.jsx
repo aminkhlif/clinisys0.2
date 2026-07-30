@@ -94,7 +94,7 @@ function AdminUsersPage() {
       setTotalElements(uRes.data.totalElements || uRes.data.length);
       setModules(mRes.data.content || mRes.data || []);
     } catch (e) {
-      console.error(e);
+      enqueueSnackbar('Erreur lors du chargement des données', { variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -129,7 +129,7 @@ function AdminUsersPage() {
       setUsers(users.map(u => u.id === user.id ? { ...u, role: newRole } : u));
       enqueueSnackbar('Rôle mis à jour', { variant: 'success' });
     } catch (e) {
-      console.error(e);
+      enqueueSnackbar('Erreur lors de la mise à jour du rôle', { variant: 'error' });
     }
   };
 
@@ -140,7 +140,7 @@ function AdminUsersPage() {
       setUsers(users.map(u => u.id === user.id ? { ...u, compteActif: nouveauStatut } : u));
       enqueueSnackbar('Statut mis à jour', { variant: 'success' });
     } catch (e) {
-      console.error(e);
+      enqueueSnackbar('Erreur lors de la mise à jour du statut', { variant: 'error' });
     }
   };
 
@@ -151,7 +151,7 @@ function AdminUsersPage() {
       enqueueSnackbar('Modules visibles mis à jour', { variant: 'success' });
       setSelectedUser(null);
     } catch (e) {
-      console.error(e);
+      enqueueSnackbar('Erreur lors de la mise à jour des modules', { variant: 'error' });
     }
   };
 
@@ -167,7 +167,7 @@ function AdminUsersPage() {
     } catch (e) {
       // rollback en cas d'échec
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, modulesVisiblesIds: actuels } : u));
-      console.error(e);
+      enqueueSnackbar('Erreur lors de la mise à jour', { variant: 'error' });
     }
   };
 

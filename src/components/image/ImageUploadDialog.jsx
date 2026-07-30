@@ -68,7 +68,7 @@ function ImageUploadDialog({ ouvert, sousMenuId, onFermer, onSauvegarde }) {
       reinitialiser();
       onSauvegarde();
     } catch (err) {
-      setErreur(err.response?.data?.description || 'Une erreur est survenue');
+      setErreur(err.response?.data?.message || err.response?.data?.description || 'Une erreur est survenue');
     } finally {
       setEnCours(false);
     }

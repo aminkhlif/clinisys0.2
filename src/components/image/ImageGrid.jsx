@@ -45,8 +45,20 @@ function ImageGrid({ images, selectionnees, onChangerSelection, onReordonne, onO
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={gererFinDrag}>
       <SortableContext items={images.map((img) => img.id)} strategy={rectSortingStrategy}>
         <Grid container spacing={2}>
-          {images.map((image) => (
-            <Grid key={image.id} size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2.4 }}>
+          {images.map((image, index) => (
+            <Grid 
+              key={image.id} 
+              size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2.4 }}
+              sx={{
+                animation: 'fadeSlideIn 350ms ease forwards',
+                animationDelay: `${index * 50}ms`,
+                opacity: 0,
+                '@keyframes fadeSlideIn': {
+                  '0%': { opacity: 0, transform: 'translateY(8px)' },
+                  '100%': { opacity: 1, transform: 'translateY(0)' },
+                },
+              }}
+            >
               <ImageCard
                 image={image}
                 selectionnee={selectionnees.includes(image.id)}

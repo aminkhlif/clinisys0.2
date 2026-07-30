@@ -39,12 +39,12 @@ function ModulesPage() {
   const [viewMode, setViewMode] = useState('grid');
   const [moduleEnApercu, setModuleEnApercu] = useState(null);
 
-  const chargerModules = useCallback(async (termeRecherche = '') => {
+  const chargerModules = useCallback(async (termeRecherche = '', currentPage = page, currentRowsPerPage = rowsPerPage) => {
     setChargement(true);
     try {
       const params = {
-        page,
-        taille: rowsPerPage,
+        page: currentPage,
+        taille: currentRowsPerPage,
         recherche: termeRecherche || undefined
       };
       const res = await axiosClient.get('/modules', { params });
@@ -55,19 +55,19 @@ function ModulesPage() {
     } finally {
       setChargement(false);
     }
-  }, [enqueueSnackbar, page, rowsPerPage]);
+  }, [enqueueSnackbar]);
 
+  // Initial load only
   useEffect(() => {
-    chargerModules();
-  }, [chargerModules]);
+    chargerModules(recherche, page, rowsPerPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Re-load when pagination or search changes
   useEffect(() => {
-    const delai = setTimeout(() => {
-      setPage(0);
-      chargerModules(recherche);
-    }, 300);
-    return () => clearTimeout(delai);
-  }, [recherche, chargerModules]);
+    chargerModules(recherche, page, rowsPerPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, rowsPerPage, recherche]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -90,7 +90,7 @@ function ModulesPage() {
 
   const apresSauvegarde = async (moduleCreeOuModifie) => {
     setDialogOuvert(false);
-    await chargerModules(recherche);
+    await chargerModules(recherche, page, rowsPerPage);
     enqueueSnackbar(moduleEnEdition ? 'Module mis à jour' : 'Module créé', { variant: 'success' });
     setTimeout(() => boutonNouveauModuleRef.current?.blur(), 0);
 
@@ -105,7 +105,7 @@ function ModulesPage() {
     setSuppressionEnCours(true);
     try {
       await axiosClient.delete(`/modules/${confirmation.id}`);
-      chargerModules(recherche);
+      await chargerModules(recherche, page, rowsPerPage);
       enqueueSnackbar('Module supprimé', { variant: 'success' });
     } catch {
       enqueueSnackbar('La suppression a échoué', { variant: 'error' });

@@ -50,6 +50,12 @@ export function AuthProvider({ children }) {
     await axiosClient.patch('/auth/change-password', { ancienMotDePasse, nouveauMotDePasse });
   };
 
+  const changerNomUtilisateur = async (motDePasse, nouveauNomUtilisateur) => {
+    const res = await axiosClient.patch('/auth/change-username', { motDePasse, nouveauNomUtilisateur });
+    setUtilisateur(res.data);
+    return res.data;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -61,6 +67,7 @@ export function AuthProvider({ children }) {
         inscrire,
         deconnecter,
         changerMotDePasse,
+        changerNomUtilisateur,
       }}
     >
       {children}

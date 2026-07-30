@@ -31,7 +31,7 @@ function AdminJournalPage() {
       setJournal(res.data.content);
       setTotalElements(res.data.totalElements);
     } catch (e) {
-      console.error(e);
+      enqueueSnackbar('Erreur lors du chargement du journal', { variant: 'error' });
     } finally {
       setLoading(false);
     }

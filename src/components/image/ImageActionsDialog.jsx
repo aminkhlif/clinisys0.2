@@ -192,7 +192,7 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
       onSauvegarde();
       enqueueSnackbar('Modifications enregistrées', { variant: 'success' });
     } catch (err) {
-      setErreur(err.response?.data?.description || 'Une erreur est survenue');
+      setErreur(err.response?.data?.message || err.response?.data?.description || 'Une erreur est survenue');
     } finally {
       setEnCours(false);
     }

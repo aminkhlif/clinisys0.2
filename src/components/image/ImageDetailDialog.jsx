@@ -44,7 +44,7 @@ function ImageDetailDialog({ image, onFermer, onModifie, onOuvrirActions }) {
       onModifie();
       enqueueSnackbar('Description mise à jour', { variant: 'success' });
     } catch (err) {
-      setErreur(err.response?.data?.description || 'Une erreur est survenue');
+      setErreur(err.response?.data?.message || err.response?.data?.description || 'Une erreur est survenue');
     } finally {
       setEnCours(false);
     }

@@ -21,7 +21,8 @@ function ModuleFormDialog({ ouvert, module, onFermer, onSauvegarde }) {
 
   // Reset du formulaire à l'ouverture ou quand le module change
   useEffect(() => {
-    setNom(module ? module.nom : '');
+    console.log('Module reçu dans useEffect:', module);
+    setNom(module?.nom || '');
     setErreur('');
     // focus only after dialog is open
     if (ouvert) {
@@ -40,6 +41,7 @@ function ModuleFormDialog({ ouvert, module, onFermer, onSauvegarde }) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (enCours) return;
     const trimmed = nom.trim();
+    console.log('Tentative sauvegarde - isEdition:', isEdition, 'nom original:', nom, 'nom trimmed:', trimmed);
     if (!trimmed) {
       setErreur('Le nom est obligatoire');
       inputRef.current?.focus();
@@ -55,13 +57,20 @@ function ModuleFormDialog({ ouvert, module, onFermer, onSauvegarde }) {
     setErreur('');
     try {
       if (isEdition) {
+        console.log('Modification module:', module.id, 'nouveau nom:', trimmed);
         const res = await axiosClient.put(`/modules/${module.id}`, { nom: trimmed });
+        console.log('Réponse modification:', res.data);
         onSauvegarde(res?.data || module);
       } else {
+        console.log('Création module:', trimmed);
         const res = await axiosClient.post('/modules', { nom: trimmed });
+        console.log('Réponse création:', res.data);
         onSauvegarde(res?.data);
       }
     } catch (err) {
+      console.error('Erreur sauvegarde:', err);
+      console.error('Response data:', err?.response?.data);
+      console.error('Response status:', err?.response?.status);
       // Lecture prudente du message d'erreur renvoyé par l'API
       const serverMessage = err?.response?.data?.message || err?.response?.data?.nom || null;
       setErreur(serverMessage || 'Une erreur est survenue. Réessayez.');
