@@ -44,8 +44,9 @@ axiosClient.interceptors.response.use(
         }
         await rafraichissementEnCours;
         return axiosClient(requeteOriginale);
-      } catch {
+      } catch (refreshError) {
         onEchecAuthentification();
+        enqueueSnackbar('Session expirée. Veuillez vous reconnecter.', { variant: 'warning' });
         return Promise.reject(erreur);
       }
     }

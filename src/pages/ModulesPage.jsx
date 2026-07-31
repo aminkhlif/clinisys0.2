@@ -136,11 +136,14 @@ function ModulesPage() {
           pb: 2,
         }}
       >
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          justifyContent="space-between"
-          alignItems={{ xs: 'flex-start', sm: 'center' }}
-          spacing={{ xs: 2, sm: 2 }}
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            gap: { xs: 2, sm: 2 },
+          }}
         >
           {/* Section gauche : titre */}
           <Box>
@@ -212,7 +215,7 @@ function ModulesPage() {
               Nouveau module
             </Button>
           </Stack>
-        </Stack>
+        </Box>
       </Box>
 
       {/* Contenu principal */}

@@ -1,9 +1,9 @@
 // src/pages/AdminPermissionsMatrixPage.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import { 
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Checkbox, Tooltip, Chip, Button, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, InputAdornment, Stack, CircularProgress, Paper
+  TextField, InputAdornment, Stack, CircularProgress, Paper, TablePagination
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -11,13 +11,143 @@ import DoneAllIcon from '@mui/icons-material/DoneAll';
 import DeselectIcon from '@mui/icons-material/Deselect';
 import axiosClient from '../api/axiosClient.js';
 import AdminLayout from '../components/layout/AdminLayout.jsx';
-import AdminNav from '../components/admin/AdminNav.jsx';
 import { useSnackbar } from 'notistack';
+
+// Memoized row component for performance
+const PermissionRow = memo(({ 
+  user, 
+  filteredModules, 
+  enCoursId, 
+  toggleModule, 
+  toutCocher, 
+  toutDecocher, 
+  openCopyDialog,
+  estCoche
+}) => {
+  return (
+    <TableRow hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
+      <TableCell
+        sx={{
+          position: 'sticky',
+          left: 0,
+          zIndex: 2,
+          bgcolor: 'background.paper',
+          minWidth: 240,
+          px: 2,
+        }}
+      >
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          <Box sx={{ 
+            width: 36, 
+            height: 36, 
+            borderRadius: '50%', 
+            bgcolor: user.role === 'ADMIN' ? '#EF444415' : '#3B82F615',
+            color: user.role === 'ADMIN' ? '#EF4444' : '#3B82F6',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 700,
+            fontSize: '0.9rem'
+          }}>
+            {user.nomUtilisateur.charAt(0).toUpperCase()}
+          </Box>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
+              {user.nomUtilisateur}
+            </Typography>
+            <Stack direction="row" spacing={0.5} sx={{ mt: 0.25 }}>
+              {user.role === 'ADMIN' && (
+                <Chip label="ADMIN" size="small" color="error" variant="outlined" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 600 }} />
+              )}
+              {!user.compteActif && (
+                <Chip label="inactif" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 600 }} />
+              )}
+            </Stack>
+          </Box>
+        </Stack>
+      </TableCell>
+      {filteredModules.map((m) => {
+        const cle = `${user.id}-${m.id}`;
+        const disabled = user.role === 'ADMIN' || enCoursId === cle;
+        const contenu = (
+          <Checkbox
+            checked={user.role === 'ADMIN' ? true : estCoche(user, m.id)}
+            disabled={disabled}
+            onChange={() => toggleModule(user, m.id)}
+            size="medium"
+            sx={{ p: 0.75 }}
+          />
+        );
+        return (
+          <TableCell key={m.id} align="center" sx={{ px: 1.5 }}>
+            {user.role === 'ADMIN' ? (
+              <Tooltip title="Les administrateurs ont accès à tous les modules">
+                <Box component="span" sx={{ opacity: 0.5 }}>{contenu}</Box>
+              </Tooltip>
+            ) : (
+              contenu
+            )}
+          </TableCell>
+        );
+      })}
+      <TableCell 
+        align="center" 
+        sx={{ 
+          position: 'sticky', 
+          right: 0, 
+          zIndex: 2, 
+          bgcolor: 'background.paper',
+          minWidth: 140,
+          px: 1.5
+        }}
+      >
+        {user.role !== 'ADMIN' && (
+          <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+            {enCoursId?.startsWith(`${user.id}-`) && (
+              <CircularProgress size={20} sx={{ mr: 0.5 }} />
+            )}
+            <Tooltip title="Tout cocher">
+              <Button 
+                size="small" 
+                onClick={() => toutCocher(user.id)}
+                disabled={!!enCoursId?.startsWith(`${user.id}-`)}
+                sx={{ minWidth: 36, p: 0.75, borderRadius: 1.5 }}
+              >
+                <DoneAllIcon fontSize="small" />
+              </Button>
+            </Tooltip>
+            <Tooltip title="Tout décocher">
+              <Button 
+                size="small" 
+                onClick={() => toutDecocher(user.id)}
+                disabled={!!enCoursId?.startsWith(`${user.id}-`)}
+                sx={{ minWidth: 36, p: 0.75, borderRadius: 1.5 }}
+              >
+                <DeselectIcon fontSize="small" />
+              </Button>
+            </Tooltip>
+            <Tooltip title="Copier les permissions">
+              <Button 
+                size="small" 
+                onClick={() => openCopyDialog(user)}
+                disabled={!!enCoursId?.startsWith(`${user.id}-`)}
+                sx={{ minWidth: 36, p: 0.75, borderRadius: 1.5 }}
+              >
+                <ContentCopyIcon fontSize="small" />
+              </Button>
+            </Tooltip>
+          </Stack>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+});
+
+PermissionRow.displayName = 'PermissionRow';
 
 function AdminPermissionsMatrixPage() {
   const [matrix, setMatrix] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [enCoursId, setEnCoursId] = useState(null);
   const [rechercheUtilisateur, setRechercheUtilisateur] = useState('');
   const [rechercheModule, setRechercheModule] = useState('');
   const { enqueueSnackbar } = useSnackbar();
@@ -27,17 +157,17 @@ function AdminPermissionsMatrixPage() {
   const [utilisateurSource, setUtilisateurSource] = useState(null);
   const [utilisateursCibles, setUtilisateursCibles] = useState([]);
   const [copyLoading, setCopyLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [enCoursId, setEnCoursId] = useState(null);
 
   const loadMatrix = async () => {
     setLoading(true);
     try {
-      const params = {
-        rechercheUtilisateur: rechercheUtilisateur || undefined,
-        rechercheModule: rechercheModule || undefined
-      };
-      const res = await axiosClient.get('/admin/permissions/matrice', { params });
+      const res = await axiosClient.get('/admin/permissions/matrice');
       setMatrix(res.data);
     } catch (e) {
+      console.error('Erreur loadMatrix:', e);
       enqueueSnackbar('Erreur lors du chargement de la matrice', { variant: 'error' });
     } finally {
       setLoading(false);
@@ -45,13 +175,35 @@ function AdminPermissionsMatrixPage() {
   };
 
   useEffect(() => {
-    const delay = setTimeout(() => loadMatrix(), 300);
-    return () => clearTimeout(delay);
-  }, [rechercheUtilisateur, rechercheModule]);
+    loadMatrix();
+  }, []);
 
-  const estCoche = (user, moduleId) => (user.modulesVisiblesIds || []).includes(moduleId);
+  // Client-side filtering with useMemo - MUST be before conditional returns
+  const filteredUsers = useMemo(() => {
+    if (!matrix?.utilisateurs) return [];
+    return matrix.utilisateurs.filter(user => {
+      const searchLower = rechercheUtilisateur.toLowerCase();
+      return !searchLower || user.nomUtilisateur.toLowerCase().includes(searchLower);
+    });
+  }, [matrix?.utilisateurs, rechercheUtilisateur]);
 
-  const toggleModule = async (user, moduleId) => {
+  const filteredModules = useMemo(() => {
+    if (!matrix?.tousModules) return [];
+    return matrix.tousModules.filter(module => {
+      const searchLower = rechercheModule.toLowerCase();
+      return !searchLower || module.nom.toLowerCase().includes(searchLower);
+    });
+  }, [matrix?.tousModules, rechercheModule]);
+
+  // Pagination - MUST be before conditional returns
+  const paginatedUsers = useMemo(() => {
+    const startIndex = page * rowsPerPage;
+    return filteredUsers.slice(startIndex, startIndex + rowsPerPage);
+  }, [filteredUsers, page, rowsPerPage]);
+
+  const estCoche = useCallback((user, moduleId) => (user.modulesVisiblesIds || []).includes(moduleId), []);
+
+  const toggleModule = useCallback(async (user, moduleId) => {
     if (user.role === 'ADMIN') return;
     const cle = `${user.id}-${moduleId}`;
     const coche = estCoche(user, moduleId);
@@ -70,22 +222,17 @@ function AdminPermissionsMatrixPage() {
     try {
       await axiosClient.patch(`/admin/utilisateurs/${user.id}/modules-visibles`, { moduleIds: nouveaux });
     } catch (e) {
-      // Rollback
-      setMatrix(prev => ({
-        ...prev,
-        utilisateurs: prev.utilisateurs.map(u => 
-          u.id === user.id ? { ...u, modulesVisiblesIds: actuels } : u
-        )
-      }));
       enqueueSnackbar('Erreur lors de la mise à jour', { variant: 'error' });
     } finally {
       setEnCoursId(null);
     }
-  };
+  }, [enqueueSnackbar, estCoche]);
 
-  const toutCocher = async (userId) => {
-    const user = matrix.utilisateurs.find(u => u.id === userId);
+  const toutCocher = useCallback(async (userId) => {
+    const user = matrix?.utilisateurs.find(u => u.id === userId);
     if (!user || user.role === 'ADMIN') return;
+    
+    setEnCoursId(`${userId}-all`);
     
     const tousModuleIds = matrix.tousModules.map(m => m.id);
     setMatrix(prev => ({
@@ -101,12 +248,16 @@ function AdminPermissionsMatrixPage() {
     } catch (e) {
       loadMatrix();
       enqueueSnackbar('Erreur lors de l\'autorisation', { variant: 'error' });
+    } finally {
+      setEnCoursId(null);
     }
-  };
+  }, [matrix?.utilisateurs, matrix?.tousModules, enqueueSnackbar]);
 
-  const toutDecocher = async (userId) => {
-    const user = matrix.utilisateurs.find(u => u.id === userId);
+  const toutDecocher = useCallback(async (userId) => {
+    const user = matrix?.utilisateurs.find(u => u.id === userId);
     if (!user || user.role === 'ADMIN') return;
+    
+    setEnCoursId(`${userId}-all`);
     
     setMatrix(prev => ({
       ...prev,
@@ -121,14 +272,25 @@ function AdminPermissionsMatrixPage() {
     } catch (e) {
       loadMatrix();
       enqueueSnackbar('Erreur lors du retrait', { variant: 'error' });
+    } finally {
+      setEnCoursId(null);
     }
-  };
+  }, [matrix?.utilisateurs, enqueueSnackbar]);
 
-  const openCopyDialog = (user) => {
+  const openCopyDialog = useCallback((user) => {
     setUtilisateurSource(user);
     setUtilisateursCibles([]);
     setCopyDialogOpen(true);
-  };
+  }, []);
+
+  const handleChangePage = useCallback((event, newPage) => {
+    setPage(newPage);
+  }, []);
+
+  const handleChangeRowsPerPage = useCallback((event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  }, []);
 
   const copyPermissions = async () => {
     if (!utilisateurSource || utilisateursCibles.length === 0) return;
@@ -153,7 +315,6 @@ function AdminPermissionsMatrixPage() {
     return (
       <AdminLayout>
         <Box sx={{ pb: 6, maxWidth: 1400, mx: 'auto', px: { xs: 2, sm: 3 } }}>
-          <AdminNav />
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress />
           </Box>
@@ -162,16 +323,29 @@ function AdminPermissionsMatrixPage() {
     );
   }
 
-  const filteredUsers = matrix?.utilisateurs || [];
-  const filteredModules = matrix?.tousModules || [];
+  if (!matrix) {
+    return (
+      <AdminLayout>
+        <Box sx={{ pb: 6, maxWidth: 1400, mx: 'auto', px: { xs: 2, sm: 3 } }}>
+          <Paper sx={{ p: 4, borderRadius: 2.5, textAlign: 'center' }}>
+            <Typography color="text.secondary">Erreur lors du chargement des données.</Typography>
+            <Button onClick={loadMatrix} sx={{ mt: 2 }}>Réessayer</Button>
+          </Paper>
+        </Box>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
       <Box sx={{ pb: 6, maxWidth: 1400, mx: 'auto', px: { xs: 2, sm: 3 } }}>
-        <AdminNav />
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.25 }}>Matrice des permissions</Typography>
+          <Typography variant="body2" color="text.secondary">Gérer les accès aux modules par utilisateur</Typography>
+        </Box>
 
         {/* Search bars */}
-        <Paper sx={{ p: 2.5, mb: 3, borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <Paper sx={{ p: 2.5, mb: 3, borderRadius: 2.5, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" justifyContent="space-between">
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: { xs: '100%', sm: 'auto' } }}>
               <TextField
@@ -203,170 +377,103 @@ function AdminPermissionsMatrixPage() {
                 sx={{ width: { xs: '100%', sm: 280 } }}
               />
             </Stack>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
               {filteredUsers.length} utilisateurs × {filteredModules.length} modules
             </Typography>
           </Stack>
         </Paper>
 
         {filteredModules.length === 0 ? (
-          <Paper sx={{ p: 4, borderRadius: 3, textAlign: 'center' }}>
+          <Paper sx={{ p: 4, borderRadius: 2.5, textAlign: 'center' }}>
             <Typography color="text.secondary">Aucun module à afficher.</Typography>
           </Paper>
         ) : (
-          <TableContainer component={Paper} sx={{ borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'auto' }}>
-            <Table size="small" stickyHeader>
-              <TableHead sx={{ bgcolor: 'grey.50' }}>
-                <TableRow>
-                  <TableCell
-                    sx={{
-                      position: 'sticky',
-                      left: 0,
-                      zIndex: 3,
-                      bgcolor: 'grey.50',
-                      fontWeight: 700,
-                      minWidth: 220,
-                    }}
-                  >
-                    Utilisateur
-                  </TableCell>
-                  {filteredModules.map((m) => (
-                    <TableCell key={m.id} align="center" sx={{ fontWeight: 700, minWidth: 100, px: 1 }}>
-                      <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem' }}>
-                        {m.nom}
-                      </Typography>
-                    </TableCell>
-                  ))}
-                  <TableCell 
-                    align="center" 
-                    sx={{ 
-                      position: 'sticky', 
-                      right: 0, 
-                      zIndex: 3, 
-                      bgcolor: 'grey.50',
-                      fontWeight: 700,
-                      minWidth: 120,
-                      px: 1
-                    }}
-                  >
-                    Actions
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredUsers.map((u) => (
-                  <TableRow key={u.id} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
+          <Box sx={{ mb: 3 }}>
+            {/* Legend */}
+            <Stack direction="row" spacing={3} sx={{ mb: 2, px: 1 }}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Checkbox checked disabled size="small" sx={{ p: 0.5 }} />
+                <Typography variant="caption" color="text.secondary">Accès autorisé</Typography>
+              </Stack>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Checkbox checked={false} disabled size="small" sx={{ p: 0.5 }} />
+                <Typography variant="caption" color="text.secondary">Accès refusé</Typography>
+              </Stack>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Checkbox checked disabled size="small" sx={{ p: 0.5, opacity: 0.5 }} />
+                <Typography variant="caption" color="text.secondary">Admin (tout accès)</Typography>
+              </Stack>
+            </Stack>
+
+            <TableContainer component={Paper} sx={{ borderRadius: 2.5, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'auto' }}>
+              <Table size="small" stickyHeader>
+                <TableHead sx={{ bgcolor: 'grey.50' }}>
+                  <TableRow>
                     <TableCell
                       sx={{
                         position: 'sticky',
                         left: 0,
-                        zIndex: 2,
-                        bgcolor: 'background.paper',
-                        minWidth: 220,
+                        zIndex: 3,
+                        bgcolor: 'grey.50',
+                        fontWeight: 700,
+                        minWidth: 240,
+                        px: 2,
                       }}
                     >
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <Box sx={{ 
-                          width: 32, 
-                          height: 32, 
-                          borderRadius: '50%', 
-                          bgcolor: u.role === 'ADMIN' ? '#EF444415' : '#3B82F615',
-                          color: u.role === 'ADMIN' ? '#EF4444' : '#3B82F6',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 700,
-                          fontSize: '0.8rem'
-                        }}>
-                          {u.nomUtilisateur.charAt(0).toUpperCase()}
-                        </Box>
-                        <Box sx={{ minWidth: 0 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                            {u.nomUtilisateur}
-                          </Typography>
-                          <Stack direction="row" spacing={0.5} sx={{ mt: 0.25 }}>
-                            {u.role === 'ADMIN' && (
-                              <Chip label="ADMIN" size="small" color="error" variant="outlined" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600 }} />
-                            )}
-                            {!u.compteActif && (
-                              <Chip label="inactif" size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600 }} />
-                            )}
-                          </Stack>
-                        </Box>
-                      </Stack>
+                      Utilisateur
                     </TableCell>
-                    {filteredModules.map((m) => {
-                      const cle = `${u.id}-${m.id}`;
-                      const disabled = u.role === 'ADMIN' || enCoursId === cle;
-                      const contenu = (
-                        <Checkbox
-                          checked={u.role === 'ADMIN' ? true : estCoche(u, m.id)}
-                          disabled={disabled}
-                          onChange={() => toggleModule(u, m.id)}
-                          size="small"
-                          sx={{ p: 0.5 }}
-                        />
-                      );
-                      return (
-                        <TableCell key={m.id} align="center" sx={{ px: 1 }}>
-                          {u.role === 'ADMIN' ? (
-                            <Tooltip title="Les administrateurs ont accès à tous les modules">
-                              <Box component="span">{contenu}</Box>
-                            </Tooltip>
-                          ) : (
-                            contenu
-                          )}
-                        </TableCell>
-                      );
-                    })}
+                    {filteredModules.map((m) => (
+                      <TableCell key={m.id} align="center" sx={{ fontWeight: 700, minWidth: 100, px: 1.5 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                          {m.nom}
+                        </Typography>
+                      </TableCell>
+                    ))}
                     <TableCell 
                       align="center" 
                       sx={{ 
                         position: 'sticky', 
                         right: 0, 
-                        zIndex: 2, 
-                        bgcolor: 'background.paper',
-                        minWidth: 120,
-                        px: 1
+                        zIndex: 3, 
+                        bgcolor: 'grey.50',
+                        fontWeight: 700,
+                        minWidth: 140,
+                        px: 1.5
                       }}
                     >
-                      {u.role !== 'ADMIN' && (
-                        <Stack direction="row" spacing={0.25} justifyContent="center">
-                          <Tooltip title="Tout cocher">
-                            <Button 
-                              size="small" 
-                              onClick={() => toutCocher(u.id)}
-                              sx={{ minWidth: 32, p: 0.5 }}
-                            >
-                              <DoneAllIcon fontSize="small" />
-                            </Button>
-                          </Tooltip>
-                          <Tooltip title="Tout décocher">
-                            <Button 
-                              size="small" 
-                              onClick={() => toutDecocher(u.id)}
-                              sx={{ minWidth: 32, p: 0.5 }}
-                            >
-                              <DeselectIcon fontSize="small" />
-                            </Button>
-                          </Tooltip>
-                          <Tooltip title="Copier les permissions">
-                            <Button 
-                              size="small" 
-                              onClick={() => openCopyDialog(u)}
-                              sx={{ minWidth: 32, p: 0.5 }}
-                            >
-                              <ContentCopyIcon fontSize="small" />
-                            </Button>
-                          </Tooltip>
-                        </Stack>
-                      )}
+                      Actions
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {paginatedUsers.map((u) => (
+                    <PermissionRow
+                      key={u.id}
+                      user={u}
+                      filteredModules={filteredModules}
+                      enCoursId={enCoursId}
+                      toggleModule={toggleModule}
+                      toutCocher={toutCocher}
+                      toutDecocher={toutDecocher}
+                      openCopyDialog={openCopyDialog}
+                      estCoche={estCoche}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              rowsPerPageOptions={[10, 25, 50, 100]}
+              component="div"
+              count={filteredUsers.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              labelRowsPerPage="Lignes par page:"
+              sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+            />
+          </Box>
         )}
 
         {/* Copy permissions dialog */}

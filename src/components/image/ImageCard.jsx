@@ -12,6 +12,7 @@ import BrokenImageOutlinedIcon from '@mui/icons-material/BrokenImageOutlined';
 function ImageCard({ image, selectionnee, onBasculerSelection, onOuvrirDetail, onOuvrirActions }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: image.id });
   const [imageErreur, setImageErreur] = useState(false);
+  const [useThumbnail, setUseThumbnail] = useState(true);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -20,8 +21,20 @@ function ImageCard({ image, selectionnee, onBasculerSelection, onOuvrirDetail, o
     cursor: 'grab',
   };
 
-  const urlImage = image.donneesBase64 ? `data:${image.typeContenu};base64,${image.donneesBase64}` : image.url;
+  const urlImage = image.donneesBase64 
+    ? `data:${image.typeContenu};base64,${image.donneesBase64}`
+    : image.url;
+  const urlThumbnail = image.id ? `/api/images/${image.id}/thumbnail` : urlImage;
+  const urlDisplay = useThumbnail && image.id ? urlThumbnail : urlImage;
   const aDesDonnees = Boolean(urlImage);
+
+  const handleImageError = () => {
+    if (useThumbnail && image.id) {
+      setUseThumbnail(false); // Fallback to original image
+    } else {
+      setImageErreur(true);
+    }
+  };
 
   return (
     <Card
@@ -60,9 +73,10 @@ function ImageCard({ image, selectionnee, onBasculerSelection, onOuvrirDetail, o
           <CardMedia
             component="img"
             height="160"
-            image={urlImage}
+            image={urlDisplay}
             alt={image.nom}
-            onError={() => setImageErreur(true)}
+            onError={handleImageError}
+            loading="lazy"
             sx={{ objectFit: 'cover', width: '100%', height: '100%' }}
           />
         ) : (

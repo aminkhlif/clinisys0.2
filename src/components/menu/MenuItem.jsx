@@ -1,5 +1,5 @@
 // src/components/menu/MenuItem.jsx
-import { Box, ListItemButton, ListItemText, IconButton, Collapse, List, Stack, Chip } from '@mui/material';
+import { Box, ListItemButton, ListItemText, IconButton, Collapse, List, Stack, Chip, Divider } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -23,7 +23,17 @@ function MenuItem({
   const totalImages = sousMenus.reduce((sum, sm) => sum + (sm.nombreImages || 0), 0);
 
   return (
-    <Box sx={{ mb: 0.5 }}>
+    <Box 
+      sx={{ 
+        mb: 0.5,
+        ...(ouvert && {
+          bgcolor: 'rgba(0, 0, 0, 0.02)',
+          borderRadius: 1.5,
+          borderLeft: '2px solid primary.main',
+          pl: 0.5,
+        })
+      }}
+    >
       <ListItemButton
         onClick={onToggle}
         sx={{
@@ -98,38 +108,81 @@ function MenuItem({
       </ListItemButton>
 
       <Collapse in={ouvert} timeout={{ enter: 300, exit: 200 }} unmountOnExit>
-        <List component="div" disablePadding dense>
-          {sousMenus.map((sousMenu) => (
-            <SousMenuItem
-              key={sousMenu.id}
-              sousMenu={sousMenu}
-              selectionne={sousMenuIdActif === String(sousMenu.id)}
-              onSelect={() => onSelectSousMenu(sousMenu.id)}
-              onEdit={() => onEditSousMenu(sousMenu)}
-              onDelete={() => onDeleteSousMenu(sousMenu)}
-            />
-          ))}
-          <ListItemButton
+        <Box sx={{ position: 'relative' }}>
+          {/* Vertical connection line */}
+          <Box
             sx={{
-              pl: 3.5,
-              borderRadius: 1.5,
-              color: 'text.secondary',
-              transition: 'all 200ms ease',
-              '&:hover': { 
-                color: 'primary.main', 
-                bgcolor: 'action.hover',
-                transform: 'translateX(2px)'
-              },
+              position: 'absolute',
+              left: 12,
+              top: 0,
+              bottom: 0,
+              width: '1px',
+              bgcolor: 'text.primary',
+              opacity: 0.4,
+              zIndex: 0,
             }}
-            onClick={() => onAjouterSousMenu(menu.id)}
-          >
-            <AddIcon fontSize="small" sx={{ mr: 1 }} />
-            <ListItemText
-              primary="Nouveau sous-menu"
-              slotProps={{ primary: { sx: { fontSize: '0.8rem' } } }}
-            />
-          </ListItemButton>
-        </List>
+          />
+          <List component="div" disablePadding dense>
+            {sousMenus.map((sousMenu, index) => (
+              <Box key={sousMenu.id} sx={{ position: 'relative' }}>
+                {/* Horizontal connector line for each submenu */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    left: 12,
+                    top: '50%',
+                    width: 8,
+                    height: '1px',
+                    bgcolor: 'text.primary',
+                    opacity: 0.4,
+                    zIndex: 0,
+                  }}
+                />
+                <SousMenuItem
+                  sousMenu={sousMenu}
+                  selectionne={sousMenuIdActif === String(sousMenu.id)}
+                  onSelect={() => onSelectSousMenu(sousMenu.id)}
+                  onEdit={() => onEditSousMenu(sousMenu)}
+                  onDelete={() => onDeleteSousMenu(sousMenu)}
+                />
+              </Box>
+            ))}
+            <Box sx={{ position: 'relative' }}>
+              <Box
+                sx={{
+                  position: 'absolute',
+                  left: 12,
+                  top: '50%',
+                  width: 8,
+                  height: '1px',
+                  bgcolor: 'text.primary',
+                  opacity: 0.4,
+                  zIndex: 0,
+                }}
+              />
+              <ListItemButton
+                sx={{
+                  pl: 5,
+                  borderRadius: 1.5,
+                  color: 'text.secondary',
+                  transition: 'all 200ms ease',
+                  '&:hover': { 
+                    color: 'primary.main', 
+                    bgcolor: 'action.hover',
+                    transform: 'translateX(2px)'
+                  },
+                }}
+                onClick={() => onAjouterSousMenu(menu.id)}
+              >
+                <AddIcon fontSize="small" sx={{ mr: 1 }} />
+                <ListItemText
+                  primary="Nouveau sous-menu"
+                  slotProps={{ primary: { sx: { fontSize: '0.8rem' } } }}
+                />
+              </ListItemButton>
+            </Box>
+          </List>
+        </Box>
       </Collapse>
     </Box>
   );

@@ -17,7 +17,6 @@ import RefreshIcon               from '@mui/icons-material/Refresh';
 import { useSnackbar }           from 'notistack';
 import axiosClient               from '../api/axiosClient.js';
 import AdminLayout               from '../components/layout/AdminLayout.jsx';
-import AdminNav                  from '../components/admin/AdminNav.jsx';
 import { useNavigate }           from 'react-router-dom';
 
 const TEAL   = '#0D9488';
@@ -32,7 +31,7 @@ function StatCard({ label, value, loading, icon, color }) {
     <Card
       sx={{
         height: '100%',
-        borderRadius: 2,
+        borderRadius: 2.5,
         border: '1px solid',
         borderColor: 'divider',
         boxShadow: 'none',
@@ -41,42 +40,42 @@ function StatCard({ label, value, loading, icon, color }) {
         transition: 'border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
         '&:hover': {
           borderColor: alpha(color, 0.5),
-          boxShadow: `0 0 0 2px ${alpha(color, 0.12)}`,
-          transform: 'translateY(-2px)',
+          boxShadow: `0 4px 12px ${alpha(color, 0.15)}`,
+          transform: 'translateY(-4px)',
         },
         '&::before': {
           content: '""',
           position: 'absolute',
           left: 0, top: 0, bottom: 0,
-          width: 3,
-          background: color,
-          borderRadius: '2px 0 0 2px',
+          width: 4,
+          background: `linear-gradient(180deg, ${color} 0%, ${alpha(color, 0.6)} 100%)`,
+          borderRadius: '2.5px 0 0 2.5px',
         },
       }}
     >
-      <CardContent sx={{ p: 1.5, pl: 2.5 }}>
-        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
-          <Box sx={{ minWidth: 0 }}>
+      <CardContent sx={{ p: 2.5, pl: 3 }}>
+        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={2}>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography
               variant="caption"
               sx={{
                 display: 'block', color: 'text.secondary', fontWeight: 600,
-                textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.62rem',
-                mb: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.7rem',
+                mb: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
               }}
             >
               {label}
             </Typography>
             {loading
-              ? <Skeleton variant="text" width={48} height={34} sx={{ borderRadius: 1 }} />
+              ? <Skeleton variant="text" width={60} height={40} sx={{ borderRadius: 1 }} />
               : (
-                <Typography sx={{ fontWeight: 800, lineHeight: 1, color: 'text.primary', fontSize: '1.6rem' }}>
+                <Typography sx={{ fontWeight: 800, lineHeight: 1, color: 'text.primary', fontSize: '2rem' }}>
                   {(value ?? 0).toLocaleString()}
                 </Typography>
               )}
           </Box>
-          <Box sx={{ flexShrink: 0, p: 0.75, borderRadius: 1.5, bgcolor: alpha(color, 0.1), color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {icon}
+          <Box sx={{ flexShrink: 0, p: 1.5, borderRadius: 2, bgcolor: alpha(color, 0.12), color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Box sx={{ fontSize: '1.75rem' }}>{icon}</Box>
           </Box>
         </Stack>
       </CardContent>
@@ -87,25 +86,25 @@ function StatCard({ label, value, loading, icon, color }) {
 function ModuleBar({ module, index, max }) {
   const pct = max > 0 ? (module.nombreUtilisateurs / max) * 100 : 0;
   return (
-    <Box sx={{ py: 1.75, borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { borderBottom: 'none' } }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+    <Box sx={{ py: 2, borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { borderBottom: 'none' } }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.25 }}>
+        <Stack direction="row" alignItems="center" spacing={2}>
           <Box
             sx={{
-              width: 24, height: 24, borderRadius: '50%',
+              width: 32, height: 32, borderRadius: '50%',
               bgcolor: index === 0 ? alpha(TEAL, 0.15) : 'action.hover',
               color: index === 0 ? TEAL : 'text.secondary',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
+              fontSize: '0.85rem', fontWeight: 700, flexShrink: 0,
             }}
           >
             {index + 1}
           </Box>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>{module.nomModule}</Typography>
+          <Typography variant="body1" sx={{ fontWeight: 600 }}>{module.nomModule}</Typography>
         </Stack>
-        <Chip label={`${module.nombreUtilisateurs} utilisateurs`} size="small" sx={{ bgcolor: alpha(TEAL, 0.08), color: TEAL, fontWeight: 600, fontSize: '0.72rem', height: 22 }} />
+        <Chip label={`${module.nombreUtilisateurs} utilisateurs`} size="small" sx={{ bgcolor: alpha(TEAL, 0.1), color: TEAL, fontWeight: 600, fontSize: '0.75rem', height: 26, px: 1 }} />
       </Stack>
-      <Box sx={{ width: '100%', height: 5, bgcolor: alpha(TEAL, 0.12), borderRadius: 3, overflow: 'hidden' }}>
+      <Box sx={{ width: '100%', height: 6, bgcolor: alpha(TEAL, 0.12), borderRadius: 3, overflow: 'hidden' }}>
         <Box sx={{ height: '100%', width: `${pct}%`, bgcolor: TEAL, borderRadius: 3, transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }} />
       </Box>
     </Box>
@@ -154,14 +153,12 @@ function AdminDashboardPage() {
 
       <AdminLayout>
         <Box sx={{ pb: 6, maxWidth: 1400, mx: 'auto', px: { xs: 2, sm: 3 } }}>
-          <AdminNav />
-
           <Box sx={{ mb: 3 }}>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.25 }}>Tableau de bord</Typography>
             <Typography variant="body2" color="text.secondary">Vue d'ensemble de votre application</Typography>
           </Box>
 
-          {/* 8 cards sur une ligne + bouton Actualiser */}
+          {/* 4x2 grid cards + bouton Actualiser */}
           <Fade in timeout={500}>
             <Box sx={{ mb: 4 }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
@@ -183,9 +180,9 @@ function AdminDashboardPage() {
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(8, 1fr)',
-                  gap: 1.5,
-                  '@media (max-width: 1200px)': { gridTemplateColumns: 'repeat(4, 1fr)' },
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: 2,
+                  '@media (max-width: 1200px)': { gridTemplateColumns: 'repeat(2, 1fr)' },
                   '@media (max-width: 600px)':  { gridTemplateColumns: 'repeat(2, 1fr)' },
                 }}
               >
@@ -234,40 +231,45 @@ function AdminDashboardPage() {
               <Grid item xs={12} lg={4}>
                 <Card
                   sx={{
-                    borderRadius: 2, border: '1px solid', boxShadow: 'none', height: '100%',
-                    borderColor: noModuleCount > 0 ? alpha(AMBER, 0.4) : alpha(GREEN, 0.4),
-                    bgcolor:     noModuleCount > 0 ? alpha(AMBER, 0.04) : alpha(GREEN, 0.04),
+                    borderRadius: 2.5, border: '1px solid', boxShadow: 'none', height: '100%',
+                    borderColor: noModuleCount > 0 ? alpha(AMBER, 0.5) : alpha(GREEN, 0.5),
+                    bgcolor:     noModuleCount > 0 ? alpha(AMBER, 0.06) : alpha(GREEN, 0.06),
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      borderColor: noModuleCount > 0 ? AMBER : GREEN,
+                      boxShadow: noModuleCount > 0 ? `0 4px 12px ${alpha(AMBER, 0.15)}` : `0 4px 12px ${alpha(GREEN, 0.15)}`,
+                    },
                   }}
                 >
-                  <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <CardContent sx={{ p: 3.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                      <Box sx={{ p: 0.75, borderRadius: 1.5, display: 'flex', bgcolor: noModuleCount > 0 ? alpha(AMBER, 0.15) : alpha(GREEN, 0.15), color: noModuleCount > 0 ? AMBER : GREEN }}>
-                        {noModuleCount > 0 ? <WarningAmberIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
+                      <Box sx={{ p: 1, borderRadius: 2, display: 'flex', bgcolor: noModuleCount > 0 ? alpha(AMBER, 0.15) : alpha(GREEN, 0.15), color: noModuleCount > 0 ? AMBER : GREEN }}>
+                        {noModuleCount > 0 ? <WarningAmberIcon fontSize="medium" /> : <CheckCircleIcon fontSize="medium" />}
                       </Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
                         {noModuleCount > 0 ? 'Accès incomplets' : 'Accès complet'}
                       </Typography>
                     </Stack>
                     {loading ? (
-                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}><CircularProgress size={28} /></Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}><CircularProgress size={32} sx={{ color: noModuleCount > 0 ? AMBER : GREEN }} /></Box>
                     ) : noModuleCount > 0 ? (
                       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                        <Typography variant="h2" sx={{ fontWeight: 800, color: AMBER, lineHeight: 1, mb: 0.5 }}>{noModuleCount}</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        <Typography variant="h2" sx={{ fontWeight: 800, color: AMBER, lineHeight: 1, mb: 0.5, fontSize: '3rem' }}>{noModuleCount}</Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontWeight: 500 }}>
                           {noModuleCount === 1 ? 'utilisateur sans accès' : 'utilisateurs sans accès'}
                         </Typography>
                         <Button
                           variant="contained" fullWidth startIcon={<PeopleAltOutlinedIcon />}
                           onClick={() => navigate('/admin/utilisateurs')}
-                          sx={{ bgcolor: AMBER, '&:hover': { bgcolor: '#B45309' }, borderRadius: 2, textTransform: 'none', fontWeight: 600, boxShadow: 'none' }}
+                          sx={{ bgcolor: AMBER, '&:hover': { bgcolor: '#B45309' }, borderRadius: 2, textTransform: 'none', fontWeight: 600, boxShadow: 'none', py: 1.25 }}
                         >
                           Gérer les utilisateurs
                         </Button>
                       </Box>
                     ) : (
                       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                        <CheckCircleIcon sx={{ fontSize: 48, color: GREEN, mb: 1.5 }} />
-                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        <CheckCircleIcon sx={{ fontSize: 64, color: GREEN, mb: 2 }} />
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.95rem' }}>
                           Tous les utilisateurs ont au moins un module assigné.
                         </Typography>
                       </Box>

@@ -10,7 +10,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import axiosClient from '../api/axiosClient.js';
 import AdminLayout from '../components/layout/AdminLayout.jsx';
 import { useSnackbar } from 'notistack';
-import AdminNav from '../components/admin/AdminNav.jsx';
 import PermissionsMatrix from '../components/admin/PermissionsMatrix.jsx';
 
 function ModulesDialog({ open, onClose, user, allModules, onSave }) {
@@ -174,10 +173,13 @@ function AdminUsersPage() {
   return (
     <AdminLayout>
       <Box sx={{ pb: 6, maxWidth: 1400, mx: 'auto', px: { xs: 2, sm: 3 } }}>
-        <AdminNav />
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.25 }}>Utilisateurs</Typography>
+          <Typography variant="body2" color="text.secondary">Gérer les utilisateurs et leurs permissions</Typography>
+        </Box>
 
         {/* Search and filters */}
-        <Paper sx={{ p: 2.5, mb: 3, borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <Paper sx={{ p: 2.5, mb: 3, borderRadius: 2.5, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', lg: 'center' }} justifyContent="space-between">
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: { xs: '100%', lg: 'auto' } }}>
               <TextField
@@ -238,7 +240,7 @@ function AdminUsersPage() {
         ) : vue === 'matrice' ? (
           <PermissionsMatrix users={users} modules={modules} onToggle={toggleModuleDansMatrice} />
         ) : (
-          <TableContainer component={Paper} sx={{ borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <TableContainer component={Paper} sx={{ borderRadius: 2.5, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
             <Table>
               <TableHead sx={{ bgcolor: 'grey.50' }}>
                 <TableRow>
@@ -256,8 +258,8 @@ function AdminUsersPage() {
                     <TableCell>
                       <Stack direction="row" alignItems="center" spacing={1.5}>
                         <Box sx={{ 
-                          width: 36, 
-                          height: 36, 
+                          width: 40, 
+                          height: 40, 
                           borderRadius: '50%', 
                           bgcolor: u.role === 'ADMIN' ? '#EF444415' : '#3B82F615',
                           color: u.role === 'ADMIN' ? '#EF4444' : '#3B82F6',
@@ -265,11 +267,11 @@ function AdminUsersPage() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontWeight: 700,
-                          fontSize: '0.875rem'
+                          fontSize: '1rem'
                         }}>
                           {u.nomUtilisateur.charAt(0).toUpperCase()}
                         </Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
                           {u.nomUtilisateur}
                         </Typography>
                       </Stack>
@@ -280,7 +282,7 @@ function AdminUsersPage() {
                         size="small"
                         color={u.role === 'ADMIN' ? 'error' : 'primary'}
                         variant="outlined"
-                        sx={{ fontWeight: 600, fontSize: '0.75rem' }}
+                        sx={{ fontWeight: 600, fontSize: '0.75rem', height: 26 }}
                       />
                     </TableCell>
                     <TableCell>
@@ -292,12 +294,12 @@ function AdminUsersPage() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
                         {new Date(u.dateCreation).toLocaleDateString('fr-FR')}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
                         {new Date(u.derniereConnexion).toLocaleDateString('fr-FR')}
                       </Typography>
                     </TableCell>
@@ -306,7 +308,7 @@ function AdminUsersPage() {
                         size="small" 
                         variant="outlined"
                         onClick={() => setSelectedUser(u)}
-                        sx={{ borderRadius: 1.5 }}
+                        sx={{ borderRadius: 2, fontWeight: 600 }}
                       >
                         Gérer Modules
                       </Button>

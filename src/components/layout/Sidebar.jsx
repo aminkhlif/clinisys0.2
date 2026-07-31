@@ -1,7 +1,7 @@
 // src/components/layout/Sidebar.jsx
 import { useEffect, useRef, useState } from 'react';
 import {
-  Box, TextField, InputAdornment, List, Button, Stack, Typography, Skeleton, IconButton, Tooltip, Fade,
+  Box, TextField, InputAdornment, List, Button, Stack, Typography, Skeleton, IconButton, Tooltip, Fade, Divider,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -373,27 +373,30 @@ function Sidebar() {
                     onDeleteSousMenu={demanderSuppressionSousMenu}
                     onSelectSousMenu={(id) => navigate(`/modules/${moduleId}/sous-menus/${id}`)}
                   />
+                  {virtualRow.index < menus.length - 1 && <Divider sx={{ my: 1, borderColor: 'divider' }} />}
                 </Box>
               );
             })}
           </Box>
         ) : (
           <List dense sx={{ px: 1 }}>
-            {menus.map((menu) => (
-              <MenuItem
-                key={menu.id}
-                menu={menu}
-                ouvert={Boolean(menusOuverts[menu.id])}
-                sousMenus={sousMenusParMenu[menu.id] || []}
-                sousMenuIdActif={sousMenuId}
-                onToggle={() => basculerMenu(menu.id)}
-                onEdit={ouvrirEditionMenu}
-                onDelete={demanderSuppressionMenu}
-                onAjouterSousMenu={ouvrirCreationSousMenu}
-                onEditSousMenu={ouvrirEditionSousMenu}
-                onDeleteSousMenu={demanderSuppressionSousMenu}
-                onSelectSousMenu={(id) => navigate(`/modules/${moduleId}/sous-menus/${id}`)}
-              />
+            {menus.map((menu, index) => (
+              <Box key={menu.id}>
+                <MenuItem
+                  menu={menu}
+                  ouvert={Boolean(menusOuverts[menu.id])}
+                  sousMenus={sousMenusParMenu[menu.id] || []}
+                  sousMenuIdActif={sousMenuId}
+                  onToggle={() => basculerMenu(menu.id)}
+                  onEdit={ouvrirEditionMenu}
+                  onDelete={demanderSuppressionMenu}
+                  onAjouterSousMenu={ouvrirCreationSousMenu}
+                  onEditSousMenu={ouvrirEditionSousMenu}
+                  onDeleteSousMenu={demanderSuppressionSousMenu}
+                  onSelectSousMenu={(id) => navigate(`/modules/${moduleId}/sous-menus/${id}`)}
+                />
+                {index < menus.length - 1 && <Divider sx={{ my: 1, borderColor: 'divider' }} />}
+              </Box>
             ))}
           </List>
         )}

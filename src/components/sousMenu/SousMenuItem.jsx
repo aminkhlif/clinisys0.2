@@ -7,7 +7,7 @@ function SousMenuItem({ sousMenu, selectionne, onSelect, onEdit, onDelete }) {
   return (
       <ListItemButton
       sx={{
-        pl: 3.5,
+        pl: 5,
         borderRadius: 1.5,
         mb: 0.25,
         py: 0.75,

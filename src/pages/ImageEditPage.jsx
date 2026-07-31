@@ -1,16 +1,14 @@
 // src/pages/ImageEditPage.jsx
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box, AppBar, Toolbar, IconButton, Typography, Button, TextField, Stack, Grid, Chip,
-  Skeleton, Breadcrumbs, Tooltip, Fade, Paper,
+  Skeleton, Breadcrumbs, Tooltip, Fade, Paper, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
+import {
+  motion, AnimatePresence
+} from 'framer-motion';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import BlurOnOutlinedIcon from '@mui/icons-material/BlurOnOutlined';
-import CropSquareOutlinedIcon from '@mui/icons-material/CropSquareOutlined';
-import CenterFocusWeakOutlinedIcon from '@mui/icons-material/CenterFocusWeakOutlined';
-import AdsClickOutlinedIcon from '@mui/icons-material/AdsClickOutlined';
-import NearMeOutlinedIcon from '@mui/icons-material/NearMeOutlined';
 import UndoOutlinedIcon from '@mui/icons-material/UndoOutlined';
 import DeleteSweepOutlinedIcon from '@mui/icons-material/DeleteSweepOutlined';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
@@ -18,23 +16,26 @@ import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import CircleIcon from '@mui/icons-material/Circle';
 import CloseIcon from '@mui/icons-material/Close';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useSnackbar } from 'notistack';
 import axiosClient from '../api/axiosClient.js';
 import {
   listerActions, creerAction, modifierAction, supprimerAction, validerActions, annulerActions,
 } from '../api/actionsClient.js';
-import { CONFIG_ACTIONS, LISTE_ACTIONS } from '../components/image/configActions.js';
+import { CONFIG_ACTIONS, LISTE_ACTIONS, ICONE_ACTION } from '../components/image/configActions.js';
 import ImageEditorCanvas from '../components/image/ImageEditorCanvas.jsx';
 import { dotGridBackgroundSx } from '../theme/backgrounds.js';
-
-const ICONE_ACTION = {
-  FLOU: BlurOnOutlinedIcon,
-  RECTANGLE: CropSquareOutlinedIcon,
-  FOCUS: CenterFocusWeakOutlinedIcon,
-  CURSEUR_STATIQUE: NearMeOutlinedIcon,
-  CURSEUR_CLICK: AdsClickOutlinedIcon,
-};
+import ToolPanel from '../components/image/FloatingPanels/ToolPanel.jsx';
+import PropertiesPanel from '../components/image/FloatingPanels/PropertiesPanel.jsx';
+import HistoryPanel from '../components/image/FloatingPanels/HistoryPanel.jsx';
+import LayersPanel from '../components/image/FloatingPanels/LayersPanel.jsx';
+import StatusBar from '../components/image/StatusBar/StatusBar.jsx';
+import MainToolbar from '../components/image/Toolbar/MainToolbar.jsx';
+import QuickActions from '../components/image/Toolbar/QuickActions.jsx';
+import ContextMenu from '../components/image/Toolbar/ContextMenu.jsx';
+import { useHistory } from '../hooks/useHistory.js';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.js';
+import { usePanels } from '../hooks/usePanels.js';
 
 const INTENSITE_FLOU_PAR_DEFAUT = 8;
 const COULEUR_PAR_DEFAUT = '#FF0000';
@@ -67,6 +68,32 @@ function ImageEditPage() {
   const [actionSelectionneeId, setActionSelectionneeId] = useState(null);
   const [dimensionsNaturelles, setDimensionsNaturelles] = useState(null);
   const [vientDeSauvegarder, setVientDeSauvegarder] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState(null);
+  const [showAnnotations, setShowAnnotations] = useState(true);
+  const [contextMenuAnchor, setContextMenuAnchor] = useState(null);
+  const [quickActionsAnchor, setQuickActionsAnchor] = useState(null);
+  const [helpDialogOpen, setHelpDialogOpen] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const NIVEAUX_ZOOM = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+  const { panneaux, togglePanel, estVisible, getPosition, movePanel } = usePanels();
+  const { historique, ajouterAction: ajouterHistorique, annuler: annulerHistorique, retablir: retablirHistorique, peutAnnuler, peutRetablir } = useHistory();
+
+  const handlers = {
+    'ctrl+z': () => annulerHistorique(),
+    'ctrl+y': () => retablirHistorique(),
+    'ctrl+shift+z': () => retablirHistorique(),
+    'ctrl+s': () => { if (!enCours) toutSauvegarder(); },
+    'delete': () => { if (actionSelectionneeId) supprimerUneAction(actionSelectionneeId); },
+    'backspace': () => { if (actionSelectionneeId) supprimerUneAction(actionSelectionneeId); },
+    'escape': () => { setActionSelectionneeId(null); setContextMenuAnchor(null); setQuickActionsAnchor(null); },
+    'h': () => togglePanel('historique'),
+    'l': () => togglePanel('calques'),
+    'p': () => togglePanel('proprietes'),
+    't': () => togglePanel('outils'),
+  };
+
+  useKeyboardShortcuts(handlers);
 
   const chargerImage = async () => {
     try {
@@ -204,7 +231,78 @@ function ImageEditPage() {
     setActions((prev) => [...prev, nouvelle]);
     setActionSelectionneeId(nouvelle.id);
     setDernierTypeAjoute(type);
+    ajouterHistorique({ label: `Ajout ${config.label}`, timestamp: new Date().toLocaleTimeString() });
     setTimeout(() => setDernierTypeAjoute(null), 900);
+  };
+
+  const handleUndo = () => {
+    annulerHistorique();
+  };
+
+  const handleRedo = () => {
+    retablirHistorique();
+  };
+
+  const handleCopy = () => {
+    if (actionSelectionneeId) {
+      const action = actions.find(a => a.id === actionSelectionneeId);
+      if (action) {
+        navigator.clipboard.writeText(JSON.stringify(action));
+        enqueueSnackbar('Annotation copiée', { variant: 'success' });
+      }
+    }
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const action = JSON.parse(text);
+      const nouvelle = await creerAction({
+        ...action,
+        x: action.x + 20,
+        y: action.y + 20,
+        imageId: image.id,
+      });
+      setActions((prev) => [...prev, nouvelle]);
+      setActionSelectionneeId(nouvelle.id);
+      ajouterHistorique({ label: 'Coller annotation', timestamp: new Date().toLocaleTimeString() });
+      enqueueSnackbar('Annotation collée', { variant: 'success' });
+    } catch {
+      enqueueSnackbar('Impossible de coller', { variant: 'error' });
+    }
+  };
+
+  const handleDelete = () => {
+    if (actionSelectionneeId) {
+      supprimerUneAction(actionSelectionneeId);
+    }
+  };
+
+  const handleZoomIn = () => {
+    const indexActuel = NIVEAUX_ZOOM.reduce(
+      (plusProche, val, i) => (Math.abs(val - zoom) < Math.abs(NIVEAUX_ZOOM[plusProche] - zoom) ? i : plusProche),
+      0,
+    );
+    const nouvelIndex = Math.min(indexActuel + 1, NIVEAUX_ZOOM.length - 1);
+    setZoom(NIVEAUX_ZOOM[nouvelIndex]);
+  };
+  const handleZoomOut = () => {
+    const indexActuel = NIVEAUX_ZOOM.reduce(
+      (plusProche, val, i) => (Math.abs(val - zoom) < Math.abs(NIVEAUX_ZOOM[plusProche] - zoom) ? i : plusProche),
+      0,
+    );
+    const nouvelIndex = Math.max(indexActuel - 1, 0);
+    setZoom(NIVEAUX_ZOOM[nouvelIndex]);
+  };
+  const handleFitScreen = () => setZoom(1);
+
+  const handleContextMenu = (event) => {
+    event.preventDefault();
+    setContextMenuAnchor({ x: event.clientX, y: event.clientY });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenuAnchor(null);
   };
 
   const changerCouleur = (nouvelleCouleur) => {
@@ -306,7 +404,7 @@ function ImageEditPage() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', ...dotGridBackgroundSx }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', ...dotGridBackgroundSx, pb: 8 }}>
       <AppBar
         position="sticky"
         elevation={0}
@@ -355,11 +453,52 @@ function ImageEditPage() {
               </Fade>
               <Fade in={vientDeSauvegarder}>
                 <Stack direction="row" alignItems="center" spacing={0.4}>
-                  <CheckCircleOutlineIcon sx={{ fontSize: 14, color: 'success.main' }} />
+                  <CheckCircleIcon sx={{ fontSize: 14, color: 'success.main' }} />
                   <Typography variant="caption" sx={{ color: 'success.main' }}>Enregistré</Typography>
                 </Stack>
               </Fade>
             </Stack>
+          </Box>
+
+          {/* Main Toolbar in Header */}
+          <MainToolbar
+            onUndo={() => annulerDerniereAction()}
+            onRedo={() => retablirHistorique()}
+            canUndo={actions.length > 0}
+            canRedo={peutRetablir}
+            onSave={toutSauvegarder}
+            onDelete={() => actionSelectionneeId && supprimerUneAction(actionSelectionneeId)}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onFitScreen={handleFitScreen}
+            onToggleHistory={() => togglePanel('historique')}
+            onToggleLayers={() => togglePanel('calques')}
+            onToggleProperties={() => togglePanel('proprietes')}
+            onToggleTools={() => togglePanel('outils')}
+            onHelp={() => setHelpDialogOpen(true)}
+            zoom={zoom}
+            activePanels={panneaux}
+          />
+
+          {/* Replace Image Button */}
+          <Box sx={{ mr: 1 }}>
+            <input
+              type="file"
+              hidden
+              id="replace-image-input"
+              accept="image/*"
+              onChange={(e) => choisirFichier(e.target.files[0])}
+            />
+            <label htmlFor="replace-image-input">
+              <Button
+                variant="outlined"
+                size="small"
+                component="span"
+                startIcon={<UploadFileOutlinedIcon fontSize="small" />}
+              >
+                Remplacer
+              </Button>
+            </label>
           </Box>
 
           <Button onClick={demanderFermeture} color="inherit" disabled={enCours}>Fermer</Button>
@@ -378,277 +517,176 @@ function ImageEditPage() {
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ maxWidth: 1300, mx: 'auto', p: { xs: 2, sm: 4 } }}>
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 8 }}>
-            <Box sx={{ mb: 1.5 }}>
-              <ImageEditorCanvas
-                urlImage={urlAffichee}
-                actions={actions}
-                onDeplace={deplacerAction}
-                onRedimensionne={redimensionnerAction}
-                onSupprime={supprimerUneAction}
-                actionSelectionneeId={actionSelectionneeId}
-                onSelectionnerAction={setActionSelectionneeId}
-                maxHeight="calc(100vh - 320px)"
-                onDimensionsChargees={setDimensionsNaturelles}
+      {/* Main Canvas Area */}
+      <Box sx={{ 
+        position: 'relative',
+        minHeight: 'calc(100vh - 64px - 32px)',
+        pt: 2,
+        pb: 8,
+      }}>
+        <Box sx={{ maxWidth: 1000, mx: 'auto', px: { xs: 2, sm: 4 } }}>
+          <ImageEditorCanvas
+            urlImage={urlAffichee}
+            actions={showAnnotations ? actions : []}
+            onDeplace={deplacerAction}
+            onRedimensionne={redimensionnerAction}
+            onSupprime={supprimerUneAction}
+            actionSelectionneeId={actionSelectionneeId}
+            onSelectionnerAction={setActionSelectionneeId}
+            maxHeight="calc(100vh - 300px)"
+            onDimensionsChargees={setDimensionsNaturelles}
+            zoom={zoom}
+            onZoomChange={setZoom}
+            onCursorPosition={setCursorPosition}
+          />
+
+          {/* Description Panel - Below Image */}
+          <Paper
+            variant="outlined"
+            sx={{
+              mt: 2,
+              borderRadius: 2,
+              bgcolor: 'background.paper',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            }}
+          >
+            <Box sx={{ p: 3 }}>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Description"
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  if (erreur) setErreur('');
+                }}
+                error={Boolean(erreur)}
+                helperText={erreur}
+                disabled={enCours}
               />
             </Box>
-
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-              <Stack direction="row" alignItems="center" spacing={0.75}>
-                <ImageOutlinedIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  {image.nom}
-                  {dimensionsNaturelles && ` · ${dimensionsNaturelles.largeur}×${dimensionsNaturelles.hauteur}px`}
-                </Typography>
-              </Stack>
-              {nouveauFichier && (
-                <Chip
-                  size="small"
-                  icon={<InsertDriveFileOutlinedIcon sx={{ fontSize: 14 }} />}
-                  label={`Nouveau fichier · ${formaterTaille(nouveauFichier.size)}`}
-                  onDelete={(e) => retirerNouveauFichier(e)}
-                  sx={{ fontSize: '0.7rem' }}
-                />
-              )}
-            </Stack>
-
-            <TextField
-              fullWidth
-              multiline
-              rows={2}
-              label="Description"
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-                if (erreur) setErreur('');
-              }}
-              error={Boolean(erreur)}
-              helperText={erreur}
-              disabled={enCours}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Box sx={{ position: { md: 'sticky' }, top: { md: 88 } }}>
-              <Paper variant="outlined" sx={{ borderRadius: 3, p: 2, mb: 2 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
-                  <Typography variant="subtitle2" fontWeight={600}>Annotations</Typography>
-                  {actions.length > 0 && (
-                    <Chip
-                      size="small"
-                      label={`${actions.length} posée${actions.length > 1 ? 's' : ''}`}
-                      sx={{ fontWeight: 600 }}
-                    />
-                  )}
-                </Stack>
-
-                <Grid container spacing={1.5} sx={{ mb: typeNecessiteCouleur ? 2.5 : 1 }}>
-                  {LISTE_ACTIONS.map((type) => {
-                    const Icone = ICONE_ACTION[type];
-                    const vientEtreAjoute = dernierTypeAjoute === type;
-                    return (
-                      <Grid size={{ xs: 6, sm: 4, md: 6, lg: 4 }} key={type}>
-                        <Tooltip title={`Ajouter : ${CONFIG_ACTIONS[type].label}`} arrow placement="top">
-                          <Button
-                            fullWidth
-                            variant="outlined"
-                            onClick={() => ajouterAction(type)}
-                            sx={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              py: 1.5,
-                              px: 1,
-                              height: 76,
-                              borderColor: vientEtreAjoute ? 'primary.main' : 'divider',
-                              bgcolor: vientEtreAjoute ? 'primary.50' : 'background.paper',
-                              color: vientEtreAjoute ? 'primary.main' : 'text.secondary',
-                              transition: 'all 0.2s ease',
-                              '&:hover': { 
-                                borderColor: 'primary.main', 
-                                bgcolor: 'primary.50',
-                                color: 'primary.main',
-                                transform: 'translateY(-2px)',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                              },
-                            }}
-                          >
-                            <Icone sx={{ fontSize: 26, mb: 0.5 }} />
-                            <Typography variant="caption" sx={{ fontSize: '0.65rem', fontWeight: 600, lineHeight: 1.1, textAlign: 'center' }}>
-                              {CONFIG_ACTIONS[type].label}
-                            </Typography>
-                          </Button>
-                        </Tooltip>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-
-                {typeNecessiteCouleur && (() => {
-                  const PRESET_COLORS = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#000000', 'background.paper'];
-                  return (
-                    <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 1.5 }}>
-                        {selectionAcceptesCouleur ? "Couleur de l'annotation sélectionnée" : 'Couleur de la prochaine annotation'}
-                      </Typography>
-                      <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
-                        {PRESET_COLORS.map(c => {
-                          const isSelected = (selectionAcceptesCouleur ? (actionSelectionnee.couleur || COULEUR_PAR_DEFAUT) : couleurChoisie).toUpperCase() === c;
-                          return (
-                            <Box
-                              key={c}
-                              onClick={() => changerCouleur(c)}
-                              sx={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: '50%',
-                                bgcolor: c,
-                                cursor: 'pointer',
-                                border: '2px solid',
-                                borderColor: isSelected ? 'primary.main' : (c === 'background.paper' ? 'grey.300' : 'transparent'),
-                                boxShadow: isSelected ? '0 0 0 2px rgba(59,130,246,0.2)' : '0 1px 3px rgba(0,0,0,0.1)',
-                                transition: 'transform 0.1s, border-color 0.1s',
-                                position: 'relative',
-                                '&:hover': { transform: 'scale(1.15)' },
-                                '&::after': isSelected ? {
-                                  content: '""', position: 'absolute', top: '50%', left: '50%',
-                                  transform: 'translate(-50%, -50%)',
-                                  width: 8, height: 8, borderRadius: '50%',
-                                  bgcolor: c === 'background.paper' ? 'primary.main' : 'background.paper'
-                                } : {}
-                              }}
-                            />
-                          );
-                        })}
-                        <Box
-                          component="input"
-                          type="color"
-                          value={selectionAcceptesCouleur ? (actionSelectionnee.couleur || COULEUR_PAR_DEFAUT) : couleurChoisie}
-                          onChange={(e) => changerCouleur(e.target.value)}
-                          sx={{
-                            ml: 'auto', width: 28, height: 28, border: '1px solid', borderColor: 'divider',
-                            borderRadius: 1, p: 0, cursor: 'pointer', bgcolor: 'transparent',
-                            '&::-webkit-color-swatch-wrapper': { p: 0 },
-                            '&::-webkit-color-swatch': { border: 'none', borderRadius: 0.5 },
-                          }}
-                        />
-                      </Stack>
-                    </Box>
-                  );
-                })()}
-
-                <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-                  <Button
-                    fullWidth
-                    size="small"
-                    color="inherit"
-                    startIcon={<UndoOutlinedIcon fontSize="small" />}
-                    onClick={annulerDerniereAction}
-                    disabled={actions.length === 0}
-                    sx={{ textTransform: 'none' }}
-                  >
-                    Dernière
-                  </Button>
-                  <Button
-                    fullWidth
-                    size="small"
-                    color="inherit"
-                    startIcon={<DeleteSweepOutlinedIcon fontSize="small" />}
-                    onClick={annulerToutesLesActions}
-                    disabled={actions.length === 0}
-                    sx={{ textTransform: 'none' }}
-                  >
-                    Tout annuler
-                  </Button>
-                </Stack>
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                  Sélectionnez une annotation, puis <b>Suppr</b> pour l'effacer ou <b>Échap</b> pour désélectionner.
-                </Typography>
-              </Paper>
-
-              <Paper variant="outlined" sx={{ borderRadius: 3, p: 2 }}>
-                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
-                  Remplacer la capture
-                </Typography>
-                <Box
-                  component={nouveauFichier ? 'div' : 'label'}
-                  onDragOver={(e) => { e.preventDefault(); setSurvolFichier(true); }}
-                  onDragLeave={() => setSurvolFichier(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setSurvolFichier(false);
-                    choisirFichier(e.dataTransfer.files?.[0]);
-                  }}
-                  sx={{
-                    position: 'relative',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 1.5,
-                    py: nouveauFichier ? 2 : 4,
-                    px: 2,
-                    border: '2px dashed',
-                    borderColor: survolFichier ? 'primary.main' : 'grey.300',
-                    bgcolor: survolFichier ? 'primary.50' : 'background.paper',
-                    borderRadius: 2,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    overflow: 'hidden',
-                    '&:hover': { borderColor: 'primary.main', bgcolor: 'primary.50' },
-                  }}
-                >
-                  {nouveauFichier ? (
-                    <>
-                      <IconButton
-                        size="small"
-                        onClick={retirerNouveauFichier}
-                        sx={{
-                          position: 'absolute',
-                          top: 4,
-                          right: 4,
-                          bgcolor: 'rgba(0,0,0,0.55)',
-                          color: '#fff',
-                          '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' },
-                        }}
-                      >
-                        <CloseIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
-                      {apercuNouveauFichier && (
-                        <Box
-                          component="img"
-                          src={apercuNouveauFichier}
-                          alt="Aperçu"
-                          sx={{ maxHeight: 90, maxWidth: '100%', borderRadius: 1, objectFit: 'contain' }}
-                        />
-                      )}
-                      <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-                        {nouveauFichier.name} · {formaterTaille(nouveauFichier.size)}
-                      </Typography>
-                    </>
-                  ) : (
-                    <>
-                      <UploadFileOutlinedIcon sx={{ color: 'grey.500', fontSize: 20 }} />
-                      <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-                        Glissez une image, ou cliquez pour parcourir
-                      </Typography>
-                      <input
-                        type="file"
-                        hidden
-                        accept="image/*"
-                        onChange={(e) => choisirFichier(e.target.files[0])}
-                      />
-                    </>
-                  )}
-                </Box>
-              </Paper>
-            </Box>
-          </Grid>
-        </Grid>
+          </Paper>
+        </Box>
       </Box>
+
+      {/* Floating Panels */}
+      <ToolPanel
+        visible={estVisible('outils')}
+        onToggle={() => togglePanel('outils')}
+        onAjouterAction={ajouterAction}
+        derniereTypeAjoute={dernierTypeAjoute}
+        position={getPosition('outils')}
+        onMove={(x, y) => movePanel('outils', x, y)}
+      />
+
+      <PropertiesPanel
+        visible={estVisible('proprietes')}
+        onToggle={() => togglePanel('proprietes')}
+        actionSelectionnee={actionSelectionnee}
+        couleurChoisie={couleurChoisie}
+        onChangeCouleur={changerCouleur}
+        position={getPosition('proprietes')}
+        onMove={(x, y) => movePanel('proprietes', x, y)}
+      />
+
+      <HistoryPanel
+        visible={estVisible('historique')}
+        onToggle={() => togglePanel('historique')}
+        historique={historique}
+        index={historique.length - 1}
+        position={getPosition('historique')}
+        onMove={(x, y) => movePanel('historique', x, y)}
+      />
+
+      <LayersPanel
+        visible={estVisible('calques')}
+        onToggle={() => togglePanel('calques')}
+        actions={actions}
+        actionSelectionneeId={actionSelectionneeId}
+        onSelectionnerAction={setActionSelectionneeId}
+        onToggleVisibility={(id) => {
+          setActions(prev => prev.map(a => a.id === id ? { ...a, visible: a.visible === false ? true : false } : a));
+        }}
+        onToggleLock={(id) => {
+          setActions(prev => prev.map(a => a.id === id ? { ...a, locked: !a.locked } : a));
+        }}
+        position={getPosition('calques')}
+        onMove={(x, y) => movePanel('calques', x, y)}
+      />
+
+      {/* Status Bar */}
+      <StatusBar
+        image={image}
+        zoom={zoom}
+        dimensions={dimensionsNaturelles}
+        actionsCount={actions.length}
+        cursorPosition={cursorPosition}
+        onShowInfo={() => setHelpDialogOpen(true)}
+      />
+
+      {/* Context Menu */}
+      <ContextMenu
+        anchorPosition={contextMenuAnchor ? { top: contextMenuAnchor.mouseY, left: contextMenuAnchor.mouseX } : null}
+        open={Boolean(contextMenuAnchor)}
+        onClose={() => setContextMenuAnchor(null)}
+        onCopy={() => {}}
+        onPaste={() => {}}
+        onDelete={() => actionSelectionneeId && supprimerUneAction(actionSelectionneeId)}
+        onEdit={() => {}}
+        onLock={() => {}}
+        onUnlock={() => {}}
+        onShow={() => {}}
+        onHide={() => {}}
+        onBringToFront={() => {}}
+        onSendToBack={() => {}}
+        onZoomIn={() => setZoom(prev => Math.min(prev + 0.25, 4))}
+        onZoomOut={() => setZoom(prev => Math.max(prev - 0.25, 0.25))}
+        canPaste={false}
+        hasSelection={Boolean(actionSelectionneeId)}
+        isLocked={actionSelectionnee?.locked}
+        isVisible={actionSelectionnee?.visible !== false}
+      />
+
+      {/* Quick Actions Menu */}
+      <QuickActions
+        anchorEl={quickActionsAnchor}
+        open={Boolean(quickActionsAnchor)}
+        onClose={() => setQuickActionsAnchor(null)}
+        onCopy={() => {}}
+        onPaste={() => {}}
+        onDelete={() => actionSelectionneeId && supprimerUneAction(actionSelectionneeId)}
+        onLock={() => {}}
+        onUnlock={() => {}}
+        onShow={() => {}}
+        onHide={() => {}}
+        onBringToFront={() => {}}
+        onSendToBack={() => {}}
+        canPaste={false}
+        isLocked={actionSelectionnee?.locked}
+        isVisible={actionSelectionnee?.visible !== false}
+      />
+
+      {/* Help Dialog */}
+      <Dialog open={helpDialogOpen} onClose={() => setHelpDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Raccourcis clavier</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1}>
+            <Typography variant="caption"><b>Ctrl+Z</b> : Annuler</Typography>
+            <Typography variant="caption"><b>Ctrl+Y</b> : Rétablir</Typography>
+            <Typography variant="caption"><b>Ctrl+S</b> : Sauvegarder</Typography>
+            <Typography variant="caption"><b>Suppr</b> : Supprimer sélection</Typography>
+            <Typography variant="caption"><b>Échap</b> : Désélectionner</Typography>
+            <Typography variant="caption"><b>H</b> : Toggle Historique</Typography>
+            <Typography variant="caption"><b>L</b> : Toggle Calques</Typography>
+            <Typography variant="caption"><b>P</b> : Toggle Propriétés</Typography>
+            <Typography variant="caption"><b>T</b> : Toggle Outils</Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHelpDialogOpen(false)}>Fermer</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -13,12 +13,12 @@ const NIVEAUX_ZOOM = [0.5, 0.75, 1, 1.25, 1.5, 2];
 function ImageEditorCanvas({
   urlImage, actions, onDeplace, onRedimensionne, onSupprime,
   actionSelectionneeId, onSelectionnerAction, maxHeight = 420, onDimensionsChargees,
+  zoom = 1, onZoomChange, onCursorPosition,
 }) {
   const imgRef = useRef(null);
   const conteneurRef = useRef(null);
   const [dimensionsNaturelles, setDimensionsNaturelles] = useState({ largeur: 0, hauteur: 0 });
   const [largeurDisponible, setLargeurDisponible] = useState(0);
-  const [zoom, setZoom] = useState(1); // 1 = "ajusté au cadre"
   const [chargementImage, setChargementImage] = useState(true);
   const [erreurChargement, setErreurChargement] = useState(false);
   const [cleReessai, setCleReessai] = useState(0);
@@ -38,7 +38,6 @@ function ImageEditorCanvas({
   useEffect(() => {
     setChargementImage(true);
     setErreurChargement(false);
-    setZoom(1);
 
     // Filet de sécurité : si "load" ne se déclenche jamais pour une raison quelconque
     // (image déjà en cache décodée par le navigateur, cas limite), on ne laisse jamais
@@ -81,12 +80,14 @@ function ImageEditorCanvas({
   const hauteurAffichee = dimensionsNaturelles.hauteur * echelle;
 
   const zoomer = (sens) => {
-    const indexActuel = NIVEAUX_ZOOM.reduce(
-      (plusProche, val, i) => (Math.abs(val - zoom) < Math.abs(NIVEAUX_ZOOM[plusProche] - zoom) ? i : plusProche),
-      0,
-    );
-    const nouvelIndex = Math.min(Math.max(indexActuel + sens, 0), NIVEAUX_ZOOM.length - 1);
-    setZoom(NIVEAUX_ZOOM[nouvelIndex]);
+    if (onZoomChange) {
+      const indexActuel = NIVEAUX_ZOOM.reduce(
+        (plusProche, val, i) => (Math.abs(val - zoom) < Math.abs(NIVEAUX_ZOOM[plusProche] - zoom) ? i : plusProche),
+        0,
+      );
+      const nouvelIndex = Math.min(Math.max(indexActuel + sens, 0), NIVEAUX_ZOOM.length - 1);
+      onZoomChange(NIVEAUX_ZOOM[nouvelIndex]);
+    }
   };
 
   // Suppression au clavier de l'annotation sélectionnée (Suppr / Retour arrière),
@@ -140,7 +141,7 @@ function ImageEditorCanvas({
           </Tooltip>
           <Box
             component="button"
-            onClick={() => setZoom(1)}
+            onClick={() => onZoomChange?.(1)}
             sx={{
               border: 'none', bgcolor: 'transparent', cursor: 'pointer', fontSize: '0.75rem',
               color: zoomAjuste ? 'text.secondary' : 'text.primary',
@@ -160,7 +161,7 @@ function ImageEditorCanvas({
           </Tooltip>
           <Tooltip title="Ajuster au cadre" arrow>
             <span>
-              <IconButton size="small" onClick={() => setZoom(1)} disabled={zoomAjuste}>
+              <IconButton size="small" onClick={() => onZoomChange?.(1)} disabled={zoomAjuste}>
                 <ZoomOutMapIcon fontSize="small" />
               </IconButton>
             </span>
@@ -176,8 +177,10 @@ function ImageEditorCanvas({
           border: '1px solid',
           borderColor: 'divider',
           bgcolor: (theme) => theme.palette.mode === 'light' ? '#FAFAFA' : '#111111',
-          
-          overflow: zoom > 1 ? 'auto' : 'hidden',
+          overflow: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           '&::-webkit-scrollbar': {
             width: 8,
             height: 8,
@@ -198,6 +201,14 @@ function ImageEditorCanvas({
         }}
         onMouseDown={(e) => { if (e.target === e.currentTarget) onSelectionnerAction(null); }}
         onDragStart={(e) => e.preventDefault()}
+        onMouseMove={(e) => {
+          if (onCursorPosition && conteneurRef.current) {
+            const rect = conteneurRef.current.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / echelle;
+            const y = (e.clientY - rect.top) / echelle;
+            onCursorPosition({ x, y });
+          }
+        }}
       >
         {chargementImage && (
           <Box
@@ -268,7 +279,7 @@ function ImageEditorCanvas({
               pointerEvents: 'none',
             }}
           />
-          {actions.map((action) => (
+          {actions.filter(action => action.visible !== false).map((action) => (
             <ActionOverlay
               key={action.id}
               action={action}

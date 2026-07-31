@@ -7,7 +7,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import axiosClient from '../api/axiosClient.js';
 import AdminLayout from '../components/layout/AdminLayout.jsx';
-import AdminNav from '../components/admin/AdminNav.jsx';
+import { useSnackbar } from 'notistack';
 
 function AdminJournalPage() {
   const [journal, setJournal] = useState([]);
@@ -17,6 +17,7 @@ function AdminJournalPage() {
   const [totalElements, setTotalElements] = useState(0);
   const [typeActionFilter, setTypeActionFilter] = useState('');
   const [nomUtilisateurFilter, setNomUtilisateurFilter] = useState('');
+  const { enqueueSnackbar } = useSnackbar();
 
   const loadJournal = async (p, size) => {
     setLoading(true);
@@ -62,10 +63,13 @@ function AdminJournalPage() {
   return (
     <AdminLayout>
       <Box sx={{ pb: 6, maxWidth: 1400, mx: 'auto', px: { xs: 2, sm: 3 } }}>
-        <AdminNav />
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.25 }}>Journal d'audit</Typography>
+          <Typography variant="body2" color="text.secondary">Historique des actions et modifications</Typography>
+        </Box>
         
         {/* Filters */}
-        <Paper sx={{ p: 2.5, mb: 3, borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <Paper sx={{ p: 2.5, mb: 3, borderRadius: 2.5, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
             <TextField
               size="small"
@@ -81,7 +85,7 @@ function AdminJournalPage() {
               }}
               sx={{ width: { xs: '100%', sm: 280 } }}
             />
-            <FormControl size="small" sx={{ minWidth: 200 }}>
+            <FormControl size="small" sx={{ minWidth: 220 }}>
               <Select
                 value={typeActionFilter}
                 onChange={(e) => setTypeActionFilter(e.target.value)}
@@ -99,7 +103,7 @@ function AdminJournalPage() {
           </Stack>
         </Paper>
 
-        <TableContainer component={Paper} sx={{ borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <TableContainer component={Paper} sx={{ borderRadius: 2.5, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <Table>
             <TableHead sx={{ bgcolor: 'grey.50' }}>
               <TableRow>
@@ -130,7 +134,7 @@ function AdminJournalPage() {
                 journal.map(j => (
                   <TableRow key={j.id} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
                     <TableCell>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
                         {new Date(j.dateAction).toLocaleString('fr-FR')}
                       </Typography>
                     </TableCell>
@@ -142,18 +146,19 @@ function AdminJournalPage() {
                         sx={{ 
                           fontWeight: 600, 
                           fontSize: '0.75rem',
-                          bgcolor: 'action.hover'
+                          bgcolor: 'action.hover',
+                          height: 26
                         }}
                       />
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2">{j.cible}</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>{j.cible}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Stack direction="row" alignItems="center" spacing={1}>
+                      <Stack direction="row" alignItems="center" spacing={1.5}>
                         <Box sx={{ 
-                          width: 28, 
-                          height: 28, 
+                          width: 32, 
+                          height: 32, 
                           borderRadius: '50%', 
                           bgcolor: 'primary.main',
                           color: 'white',
@@ -161,11 +166,11 @@ function AdminJournalPage() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontWeight: 700,
-                          fontSize: '0.75rem'
+                          fontSize: '0.85rem'
                         }}>
                           {j.nomUtilisateur?.charAt(0).toUpperCase() || '?'}
                         </Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
                           {j.nomUtilisateur}
                         </Typography>
                       </Stack>
