@@ -54,7 +54,8 @@ export default function ToolPanel({ visible, onToggle, onAjouterAction, derniere
           position: 'absolute',
           left: position.x,
           top: position.y,
-          width: 60,
+          width: 280,
+          height: 'auto',
           borderRadius: 2,
           bgcolor: 'background.paper',
           zIndex: isDragging ? 200 : 100,
@@ -79,35 +80,40 @@ export default function ToolPanel({ visible, onToggle, onAjouterAction, derniere
         >
           <DragIndicatorIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
         </Box>
-        <Stack spacing={0.5} sx={{ p: 1 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', p: 2, gap: 2, justifyContent: 'center' }}>
           {LISTE_ACTIONS.map((type) => {
             const Icone = ICONE_ACTION[type];
             const vientEtreAjoute = derniereTypeAjoute === type;
             return (
-              <Tooltip key={type} title={CONFIG_ACTIONS[type].label} arrow placement="right">
-                <IconButton
-                  size="small"
-                  onClick={() => onAjouterAction(type)}
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 1,
-                    bgcolor: vientEtreAjoute ? 'primary.50' : 'transparent',
-                    color: vientEtreAjoute ? 'primary.main' : 'text.secondary',
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      bgcolor: 'primary.50',
-                      color: 'primary.main',
-                      transform: 'scale(1.05)',
-                    },
-                  }}
-                >
-                  <Icone sx={{ fontSize: 24 }} />
-                </IconButton>
+              <Tooltip key={type} title={CONFIG_ACTIONS[type].label} arrow placement="top">
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <IconButton
+                    size="small"
+                    onClick={() => onAjouterAction(type)}
+                    sx={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: 2,
+                      bgcolor: vientEtreAjoute ? 'primary.50' : 'transparent',
+                      color: vientEtreAjoute ? 'primary.main' : 'text.secondary',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        bgcolor: 'primary.50',
+                        color: 'primary.main',
+                        transform: 'scale(1.05)',
+                      },
+                    }}
+                  >
+                    <Icone sx={{ fontSize: 32 }} />
+                  </IconButton>
+                  <Typography variant="caption" sx={{ fontSize: 12, mt: 1, color: 'text.secondary', textAlign: 'center', fontWeight: 500 }}>
+                    {CONFIG_ACTIONS[type].label}
+                  </Typography>
+                </Box>
               </Tooltip>
             );
           })}
-        </Stack>
+        </Box>
       </Paper>
     </motion.div>
   );

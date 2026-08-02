@@ -4,6 +4,7 @@ import { Box, Typography } from '@mui/material';
 import MainLayout from './components/layout/MainLayout.jsx';
 import ModulesPage from './pages/ModulesPage.jsx';
 import SousMenuPage from './pages/SousMenuPage.jsx';
+import VideoEditPage from './pages/VideoEditPage.jsx';
 import ImageEditPage from './pages/ImageEditPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
@@ -63,6 +64,10 @@ function App() {
         <Route
           path="/modules/:moduleId/sous-menus/:sousMenuId/images/:imageId"
           element={<ProtectedRoute><ImageEditPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/modules/:moduleId/sous-menus/:sousMenuId/video"
+          element={<ProtectedRoute><VideoEditPage /></ProtectedRoute>}
         />
         <Route path="/modules/:moduleId/*" element={<ProtectedRoute><ModuleShell /></ProtectedRoute>} />
 

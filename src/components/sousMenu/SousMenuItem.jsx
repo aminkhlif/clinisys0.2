@@ -33,7 +33,7 @@ function SousMenuItem({ sousMenu, selectionne, onSelect, onEdit, onDelete }) {
         primary={sousMenu.nom}
         slotProps={{ primary: { sx: { fontSize: '0.825rem', fontWeight: selectionne ? 600 : 500 } } }}
       />
-      <Stack direction="row" className="row-actions" sx={{ transition: 'opacity 120ms ease' }}>
+      <Stack direction="row" className="row-actions" sx={{ transition: 'opacity 120ms ease', display: 'flex' }}>
         <IconButton
           size="small"
           onClick={(e) => { e.stopPropagation(); onEdit(); }}

@@ -28,7 +28,7 @@ function ModulesPage() {
   
   // Pagination
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [rowsPerPage, setRowsPerPage] = useState(12);
   const [totalElements, setTotalElements] = useState(0);
 
   const [dialogOuvert, setDialogOuvert] = useState(false);

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, IconButton, Stack,
-  Tooltip, CircularProgress,
+  Tooltip, CircularProgress, Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
@@ -22,7 +22,7 @@ function ImageDetailDialog({ image, onFermer, onModifie, onOuvrirActions }) {
 
   useEffect(() => {
     if (image) {
-      setDescription(image.description);
+      setDescription(image.description || '');
       setModeEdition(false);
       setErreur('');
     }
@@ -51,7 +51,7 @@ function ImageDetailDialog({ image, onFermer, onModifie, onOuvrirActions }) {
   };
 
   const annulerEdition = () => {
-    setDescription(image.description);
+    setDescription(image.description || '');
     setErreur('');
     setModeEdition(false);
   };
@@ -85,7 +85,12 @@ function ImageDetailDialog({ image, onFermer, onModifie, onOuvrirActions }) {
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Détails de la capture
+          <Box>
+            <Typography variant="h6">Détails de la capture</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {image.nom || 'Image'} • {image.typeContenu?.split('/')[1]?.toUpperCase() || 'PNG'}
+            </Typography>
+          </Box>
           <Stack direction="row" spacing={0.5}>
             <Tooltip title="Supprimer" arrow>
               <IconButton onClick={() => setConfirmationSuppression(true)} size="small" disabled={enCours}>

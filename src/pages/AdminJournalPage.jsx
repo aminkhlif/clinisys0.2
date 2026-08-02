@@ -13,7 +13,7 @@ function AdminJournalPage() {
   const [journal, setJournal] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [rowsPerPage, setRowsPerPage] = useState(12);
   const [totalElements, setTotalElements] = useState(0);
   const [typeActionFilter, setTypeActionFilter] = useState('');
   const [nomUtilisateurFilter, setNomUtilisateurFilter] = useState('');

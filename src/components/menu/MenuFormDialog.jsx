@@ -56,7 +56,7 @@ function MenuFormDialog({ ouvert, menu, moduleId, onFermer, onSauvegarde }) {
       maxWidth="xs"
       PaperProps={{ sx: { borderRadius: 3, p: 0.5 } }}
     >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, flexDirection: 'row' }}>
         {menu ? 'Modifier le menu' : 'Nouveau menu'}
         <IconButton size="small" onClick={onFermer} disabled={enCours} sx={{ ml: 2 }}>
           <CloseIcon fontSize="small" />

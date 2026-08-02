@@ -1,5 +1,5 @@
 // src/pages/AdminUsersPage.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
   Paper, Switch, Button, Dialog, DialogTitle, DialogContent, DialogActions, 
@@ -68,11 +68,16 @@ function AdminUsersPage() {
   
   // Pagination and filters
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [rowsPerPage, setRowsPerPage] = useState(12);
   const [totalElements, setTotalElements] = useState(0);
   const [recherche, setRecherche] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statutFilter, setStatutFilter] = useState('');
+  
+  // Matrix pagination
+  const [matrixPage, setMatrixPage] = useState(0);
+  const [matrixRowsPerPage, setMatrixRowsPerPage] = useState(12);
+  const [matrixTotalElements, setMatrixTotalElements] = useState(0);
 
   const loadData = async () => {
     setLoading(true);
@@ -99,18 +104,50 @@ function AdminUsersPage() {
     }
   };
 
+  const loadMatrixData = async () => {
+    setLoading(true);
+    try {
+      const params = {
+        page: matrixPage,
+        taille: matrixRowsPerPage
+      };
+      
+      const [mRes] = await Promise.all([
+        axiosClient.get('/admin/utilisateurs/matrice-permissions', { params })
+      ]);
+      setUsers(mRes.data.utilisateurs || []);
+      setMatrixTotalElements(mRes.data.totalElements || 0);
+      
+      // Only load modules if not already cached
+      if (modules.length === 0) {
+        const modRes = await axiosClient.get('/modules');
+        setModules(modRes.data.content || modRes.data || []);
+      }
+    } catch (e) {
+      enqueueSnackbar('Erreur lors du chargement de la matrice', { variant: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    loadData();
-  }, [page, rowsPerPage]);
+    if (vue === 'matrice') {
+      loadMatrixData();
+    } else {
+      loadData();
+    }
+  }, [page, rowsPerPage, matrixPage, matrixRowsPerPage, vue]);
 
   // Debounce search
   useEffect(() => {
     const delay = setTimeout(() => {
       setPage(0);
-      loadData();
+      if (vue === 'liste') {
+        loadData();
+      }
     }, 300);
     return () => clearTimeout(delay);
-  }, [recherche, roleFilter, statutFilter]);
+  }, [recherche, roleFilter, statutFilter, vue]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -119,6 +156,15 @@ function AdminUsersPage() {
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
+  };
+
+  const handleMatrixChangePage = (event, newPage) => {
+    setMatrixPage(newPage);
+  };
+
+  const handleMatrixChangeRowsPerPage = (event) => {
+    setMatrixRowsPerPage(parseInt(event.target.value, 10));
+    setMatrixPage(0);
   };
 
   const toggleRole = async (user) => {
@@ -156,19 +202,33 @@ function AdminUsersPage() {
 
   // Utilisé par la matrice : bascule un seul module pour un utilisateur,
   // mise à jour optimiste + persistance immédiate, sans fermer de dialog.
-  const toggleModuleDansMatrice = async (user, moduleId, coche) => {
+  // Optimisé avec debouncing pour éviter les appels API multiples
+  const toggleModuleDansMatrice = useCallback(async (user, moduleId, coche) => {
     const actuels = user.modulesVisiblesIds || [];
     const nouveaux = coche ? [...actuels, moduleId] : actuels.filter(id => id !== moduleId);
 
     setUsers(prev => prev.map(u => u.id === user.id ? { ...u, modulesVisiblesIds: nouveaux } : u));
     try {
-      await axiosClient.patch(`/admin/utilisateurs/${user.id}/modules-visibles`, { moduleIds: nouveaux });
+      await axiosClient.patch(`/admin/utilisateurs/${user.id}/toggle-module`, null, {
+        params: { moduleId, visible: coche }
+      });
     } catch (e) {
       // rollback en cas d'échec
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, modulesVisiblesIds: actuels } : u));
       enqueueSnackbar('Erreur lors de la mise à jour', { variant: 'error' });
     }
-  };
+  }, [enqueueSnackbar]);
+
+  // Debounce function pour éviter les appels multiples rapides
+  const debounceRef = useRef(null);
+  const debouncedToggle = useCallback((user, moduleId, coche) => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      toggleModuleDansMatrice(user, moduleId, coche);
+    }, 200);
+  }, [toggleModuleDansMatrice]);
 
   return (
     <AdminLayout>
@@ -238,7 +298,20 @@ function AdminUsersPage() {
             <CircularProgress />
           </Box>
         ) : vue === 'matrice' ? (
-          <PermissionsMatrix users={users} modules={modules} onToggle={toggleModuleDansMatrice} />
+          <>
+            <PermissionsMatrix users={users} modules={modules} onToggle={debouncedToggle} />
+            <TablePagination
+              component="div"
+              count={matrixTotalElements}
+              page={matrixPage}
+              onPageChange={handleMatrixChangePage}
+              rowsPerPage={matrixRowsPerPage}
+              onRowsPerPageChange={handleMatrixChangeRowsPerPage}
+              rowsPerPageOptions={[20, 50, 100]}
+              labelRowsPerPage="Lignes par page:"
+              sx={{ borderTop: '1px solid', borderColor: 'divider', mt: 2, justifyContent: 'flex-end' }}
+            />
+          </>
         ) : (
           <TableContainer component={Paper} sx={{ borderRadius: 2.5, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
             <Table>

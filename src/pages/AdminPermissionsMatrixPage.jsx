@@ -158,7 +158,7 @@ function AdminPermissionsMatrixPage() {
   const [utilisateursCibles, setUtilisateursCibles] = useState([]);
   const [copyLoading, setCopyLoading] = useState(false);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(12);
   const [enCoursId, setEnCoursId] = useState(null);
 
   const loadMatrix = async () => {

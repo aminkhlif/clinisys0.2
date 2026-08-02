@@ -51,7 +51,7 @@ function MenuItem({
           sx={{ flex: 1, minWidth: 0 }}
           slotProps={{ primary: { sx: { fontWeight: 500, fontSize: '0.875rem' } } }}
         />
-        <Stack direction="row" spacing={0.5} className="row-actions" sx={{ transition: 'opacity 120ms ease', alignItems: 'center', flexShrink: 0 }}>
+        <Stack direction="row" spacing={0.5} className="row-actions" sx={{ transition: 'opacity 120ms ease', alignItems: 'center', flexShrink: 0, display: 'flex' }}>
           {sousMenusCount > 0 && (
             <Chip
               label={sousMenusCount}

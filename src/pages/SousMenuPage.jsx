@@ -8,6 +8,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import MovieCreationOutlinedIcon from '@mui/icons-material/MovieCreationOutlined';
+import EditIcon from '@mui/icons-material/Edit';
 import { useSnackbar } from 'notistack';
 import axiosClient from '../api/axiosClient.js';
 import ImageGrid from '../components/image/ImageGrid.jsx';
@@ -28,7 +29,7 @@ function SousMenuPage() {
   
   // Pagination
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [rowsPerPage, setRowsPerPage] = useState(12);
   const [totalElements, setTotalElements] = useState(0);
 
   const [dialogUploadOuvert, setDialogUploadOuvert] = useState(false);
@@ -156,7 +157,7 @@ function SousMenuPage() {
       <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 1400, mx: 'auto' }}>
         <Skeleton variant="text" width={240} height={40} sx={{ mb: 2 }} />
         <Skeleton variant="rounded" height={44} width={350} sx={{ mb: 3 }} />
-        <Stack direction="row" flexWrap="wrap" gap={2}>
+        <Stack direction="row" sx={{ flexWrap: 'wrap' }} gap={2}>
           {[...Array(6)].map((_, i) => (
             <Skeleton key={i} variant="rounded" width={200} height={180} />
           ))}
@@ -198,9 +199,19 @@ function SousMenuPage() {
             Aperçu
           </Button>
           {sousMenu.videoGeneree ? (
-            <Button variant="outlined" color="error" onClick={devaliderVideo} sx={{ bgcolor: 'background.paper', height: 40 }}>
-              Dévalider la vidéo
-            </Button>
+            <>
+              <Button
+                startIcon={<EditIcon />}
+                variant="outlined"
+                onClick={() => navigate(`/modules/${moduleId}/sous-menus/${sousMenuId}/video`)}
+                sx={{ bgcolor: 'background.paper', height: 40 }}
+              >
+                Éditer la vidéo
+              </Button>
+              <Button variant="outlined" color="error" onClick={devaliderVideo} sx={{ bgcolor: 'background.paper', height: 40 }}>
+                Dévalider la vidéo
+              </Button>
+            </>
           ) : (
             <Button
               startIcon={<MovieCreationOutlinedIcon />}
@@ -275,7 +286,7 @@ function SousMenuPage() {
 
       {/* Contenu principal */}
       {chargementImages ? (
-        <Stack direction="row" flexWrap="wrap" gap={2}>
+        <Stack direction="row" sx={{ flexWrap: 'wrap' }} gap={2}>
           {[...Array(6)].map((_, i) => (
             <Skeleton key={i} variant="rounded" width={200} height={180} />
           ))}

@@ -1,5 +1,5 @@
 // src/components/admin/PermissionsMatrix.jsx
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import {
   Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Checkbox, Tooltip, Typography, Chip
@@ -8,7 +8,7 @@ import {
 // Grille visuelle : une ligne par utilisateur, une colonne par module.
 // Cocher/décocher une case appelle immédiatement onToggle(userId, moduleId, checked)
 // pour une mise à jour optimiste + persistance backend.
-function PermissionsMatrix({ users, modules, onToggle }) {
+const PermissionsMatrix = memo(function PermissionsMatrix({ users, modules, onToggle }) {
   const [enCoursId, setEnCoursId] = useState(null); // "userId-moduleId" en attente de réponse serveur
 
   const estCoche = (user, moduleId) => (user.modulesVisiblesIds || []).includes(moduleId);
@@ -103,6 +103,6 @@ function PermissionsMatrix({ users, modules, onToggle }) {
       </Table>
     </TableContainer>
   );
-}
+});
 
 export default PermissionsMatrix;
