@@ -13,6 +13,7 @@ function RegisterPage() {
   const isDark = theme?.palette?.mode === 'dark';
 
   const [nomUtilisateur, setNomUtilisateur] = useState('');
+  const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
   const [confirmationMotDePasse, setConfirmationMotDePasse] = useState('');
   const [erreurs, setErreurs] = useState({});
@@ -22,6 +23,8 @@ function RegisterPage() {
     e.preventDefault();
     const nouvellesErreurs = {};
     if (nomUtilisateur.trim().length < 3) nouvellesErreurs.nomUtilisateur = "Le nom d'utilisateur doit contenir au moins 3 caractères";
+    if (!email.trim()) nouvellesErreurs.email = 'L\'email est obligatoire';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) nouvellesErreurs.email = 'Format d\'email invalide';
     if (motDePasse.length < 6) nouvellesErreurs.motDePasse = 'Le mot de passe doit contenir au moins 6 caractères';
     if (confirmationMotDePasse !== motDePasse) nouvellesErreurs.confirmation = 'Les mots de passe ne correspondent pas';
     if (Object.keys(nouvellesErreurs).length > 0) { setErreurs(nouvellesErreurs); return; }
@@ -29,10 +32,10 @@ function RegisterPage() {
     setEnCours(true);
     setErreurs({});
     try {
-      await inscrire(nomUtilisateur.trim(), motDePasse);
+      await inscrire(nomUtilisateur.trim(), email.trim(), motDePasse);
       navigate('/', { replace: true });
     } catch (err) {
-      setErreurs({ nomUtilisateur: err.response?.data?.nomUtilisateur || 'Une erreur est survenue' });
+      setErreurs({ nomUtilisateur: err.response?.data?.nomUtilisateur || err.response?.data?.email || 'Une erreur est survenue' });
     } finally {
       setEnCours(false);
     }
@@ -108,12 +111,23 @@ function RegisterPage() {
               fullWidth
             />
             <TextField
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={Boolean(erreurs.email)}
+              helperText={erreurs.email}
+              autoComplete="email"
+              fullWidth
+            />
+            <TextField
               label="Mot de passe"
               type="password"
               value={motDePasse}
               onChange={(e) => setMotDePasse(e.target.value)}
               error={Boolean(erreurs.motDePasse)}
               helperText={erreurs.motDePasse}
+              autoComplete="new-password"
               fullWidth
             />
             <TextField

@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
 import GridOnOutlinedIcon from '@mui/icons-material/GridOnOutlined';
+import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 

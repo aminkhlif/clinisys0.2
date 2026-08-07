@@ -5,12 +5,14 @@ import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useAppTheme } from '../../context/ThemeContext.jsx';
 import ChangePasswordDialog from './ChangePasswordDialog.jsx';
 import ChangeUsernameDialog from './ChangeUsernameDialog.jsx';
+import AddEmailDialog from './AddEmailDialog.jsx';
 
 function UserMenu({ variant: forceVariant }) {
   const { utilisateur, estAdmin, deconnecter } = useAuth();
@@ -18,6 +20,7 @@ function UserMenu({ variant: forceVariant }) {
   const { enqueueSnackbar } = useSnackbar();
   const [dialogMotDePasseOuvert, setDialogMotDePasseOuvert] = useState(false);
   const [dialogNomUtilisateurOuvert, setDialogNomUtilisateurOuvert] = useState(false);
+  const [dialogEmailOuvert, setDialogEmailOuvert] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState(null);
 
   const gererDeconnexion = async () => {
@@ -96,6 +99,12 @@ function UserMenu({ variant: forceVariant }) {
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         PaperProps={{ sx: { borderRadius: 2, minWidth: 200 } }}
       >
+        {!utilisateur.email && (
+          <MenuItem onClick={() => { setMenuAnchor(null); setDialogEmailOuvert(true); }}>
+            <EmailOutlinedIcon fontSize="small" sx={{ mr: 1.5 }} />
+            Ajouter mon email
+          </MenuItem>
+        )}
         <MenuItem onClick={() => { setMenuAnchor(null); setDialogNomUtilisateurOuvert(true); }}>
           <PersonOutlineOutlinedIcon fontSize="small" sx={{ mr: 1.5 }} />
           Changer mon nom
@@ -129,6 +138,10 @@ function UserMenu({ variant: forceVariant }) {
       <ChangeUsernameDialog
         ouvert={dialogNomUtilisateurOuvert}
         onFermer={() => setDialogNomUtilisateurOuvert(false)}
+      />
+      <AddEmailDialog
+        ouvert={dialogEmailOuvert}
+        onFermer={() => setDialogEmailOuvert(false)}
       />
     </Stack>
   );

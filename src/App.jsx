@@ -8,6 +8,8 @@ import VideoEditPage from './pages/VideoEditPage.jsx';
 import ImageEditPage from './pages/ImageEditPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import AdminDashboardPage from './pages/AdminDashboardPage.jsx';
 import AdminUsersPage from './pages/AdminUsersPage.jsx';
 import AdminJournalPage from './pages/AdminJournalPage.jsx';
@@ -58,6 +60,8 @@ function App() {
         {/* Routes publiques */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
         {/* Toutes les autres routes exigent d'être authentifié */}
         <Route path="/" element={<ProtectedRoute><ModulesPage /></ProtectedRoute>} />

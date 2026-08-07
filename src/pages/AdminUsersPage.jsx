@@ -1,83 +1,34 @@
 // src/pages/AdminUsersPage.jsx
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
-  Paper, Switch, Button, Dialog, DialogTitle, DialogContent, DialogActions, 
-  FormControlLabel, Checkbox, Stack, CircularProgress, ToggleButtonGroup, ToggleButton,
+  Paper, Switch, Stack, CircularProgress, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, InputAdornment, TablePagination, MenuItem, Select, FormControl, Chip
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import DeleteIcon from '@mui/icons-material/Delete';
 import axiosClient from '../api/axiosClient.js';
 import AdminLayout from '../components/layout/AdminLayout.jsx';
 import { useSnackbar } from 'notistack';
-import PermissionsMatrix from '../components/admin/PermissionsMatrix.jsx';
 
-function ModulesDialog({ open, onClose, user, allModules, onSave }) {
-  const [selected, setSelected] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      setSelected(user.modulesVisiblesIds || []);
-    }
-  }, [user]);
-
-  const toggleModule = (id) => {
-    setSelected(prev => 
-      prev.includes(id) ? prev.filter(mId => mId !== id) : [...prev, id]
-    );
-  };
-
-  const handleSave = async () => {
-    setLoading(true);
-    await onSave(user.id, selected);
-    setLoading(false);
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Modules visibles pour {user?.nomUtilisateur}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={1} sx={{ mt: 1 }}>
-          {allModules.map(m => (
-            <FormControlLabel
-              key={m.id}
-              control={<Checkbox checked={selected.includes(m.id)} onChange={() => toggleModule(m.id)} />}
-              label={m.nom}
-            />
-          ))}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={loading}>Annuler</Button>
-        <Button onClick={handleSave} variant="contained" disabled={loading}>
-          {loading ? 'Enregistrement...' : 'Enregistrer'}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
 
 function AdminUsersPage() {
   const [users, setUsers] = useState([]);
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [vue, setVue] = useState('liste'); // 'liste' | 'matrice'
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
   
   // Pagination and filters
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(12);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
   const [recherche, setRecherche] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statutFilter, setStatutFilter] = useState('');
   
-  // Matrix pagination
-  const [matrixPage, setMatrixPage] = useState(0);
-  const [matrixRowsPerPage, setMatrixRowsPerPage] = useState(12);
-  const [matrixTotalElements, setMatrixTotalElements] = useState(0);
 
   const loadData = async () => {
     setLoading(true);
@@ -104,50 +55,19 @@ function AdminUsersPage() {
     }
   };
 
-  const loadMatrixData = async () => {
-    setLoading(true);
-    try {
-      const params = {
-        page: matrixPage,
-        taille: matrixRowsPerPage
-      };
-      
-      const [mRes] = await Promise.all([
-        axiosClient.get('/admin/utilisateurs/matrice-permissions', { params })
-      ]);
-      setUsers(mRes.data.utilisateurs || []);
-      setMatrixTotalElements(mRes.data.totalElements || 0);
-      
-      // Only load modules if not already cached
-      if (modules.length === 0) {
-        const modRes = await axiosClient.get('/modules');
-        setModules(modRes.data.content || modRes.data || []);
-      }
-    } catch (e) {
-      enqueueSnackbar('Erreur lors du chargement de la matrice', { variant: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    if (vue === 'matrice') {
-      loadMatrixData();
-    } else {
-      loadData();
-    }
-  }, [page, rowsPerPage, matrixPage, matrixRowsPerPage, vue]);
+    loadData();
+  }, [page, rowsPerPage]);
 
   // Debounce search
   useEffect(() => {
     const delay = setTimeout(() => {
       setPage(0);
-      if (vue === 'liste') {
-        loadData();
-      }
+      loadData();
     }, 300);
     return () => clearTimeout(delay);
-  }, [recherche, roleFilter, statutFilter, vue]);
+  }, [recherche, roleFilter, statutFilter]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -158,14 +78,6 @@ function AdminUsersPage() {
     setPage(0);
   };
 
-  const handleMatrixChangePage = (event, newPage) => {
-    setMatrixPage(newPage);
-  };
-
-  const handleMatrixChangeRowsPerPage = (event) => {
-    setMatrixRowsPerPage(parseInt(event.target.value, 10));
-    setMatrixPage(0);
-  };
 
   const toggleRole = async (user) => {
     const newRole = user.role === 'ADMIN' ? 'UTILISATEUR' : 'ADMIN';
@@ -189,46 +101,21 @@ function AdminUsersPage() {
     }
   };
 
-  const saveModules = async (userId, moduleIds) => {
+  const confirmDelete = async () => {
+    setDeleting(true);
     try {
-      await axiosClient.patch(`/admin/utilisateurs/${userId}/modules-visibles`, { moduleIds });
-      setUsers(users.map(u => u.id === userId ? { ...u, modulesVisiblesIds: moduleIds } : u));
-      enqueueSnackbar('Modules visibles mis à jour', { variant: 'success' });
-      setSelectedUser(null);
+      await axiosClient.delete(`/admin/utilisateurs/${deleteConfirmation.id}`);
+      await loadData();
+      enqueueSnackbar('Utilisateur supprimé', { variant: 'success' });
+      setDeleteConfirmation(null);
     } catch (e) {
-      enqueueSnackbar('Erreur lors de la mise à jour des modules', { variant: 'error' });
+      enqueueSnackbar('Erreur lors de la suppression', { variant: 'error' });
+    } finally {
+      setDeleting(false);
     }
   };
 
-  // Utilisé par la matrice : bascule un seul module pour un utilisateur,
-  // mise à jour optimiste + persistance immédiate, sans fermer de dialog.
-  // Optimisé avec debouncing pour éviter les appels API multiples
-  const toggleModuleDansMatrice = useCallback(async (user, moduleId, coche) => {
-    const actuels = user.modulesVisiblesIds || [];
-    const nouveaux = coche ? [...actuels, moduleId] : actuels.filter(id => id !== moduleId);
 
-    setUsers(prev => prev.map(u => u.id === user.id ? { ...u, modulesVisiblesIds: nouveaux } : u));
-    try {
-      await axiosClient.patch(`/admin/utilisateurs/${user.id}/toggle-module`, null, {
-        params: { moduleId, visible: coche }
-      });
-    } catch (e) {
-      // rollback en cas d'échec
-      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, modulesVisiblesIds: actuels } : u));
-      enqueueSnackbar('Erreur lors de la mise à jour', { variant: 'error' });
-    }
-  }, [enqueueSnackbar]);
-
-  // Debounce function pour éviter les appels multiples rapides
-  const debounceRef = useRef(null);
-  const debouncedToggle = useCallback((user, moduleId, coche) => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    debounceRef.current = setTimeout(() => {
-      toggleModuleDansMatrice(user, moduleId, coche);
-    }, 200);
-  }, [toggleModuleDansMatrice]);
 
   return (
     <AdminLayout>
@@ -280,16 +167,6 @@ function AdminUsersPage() {
               </FormControl>
             </Stack>
             
-            <ToggleButtonGroup
-              size="small"
-              value={vue}
-              exclusive
-              onChange={(e, v) => v && setVue(v)}
-              sx={{ bgcolor: 'background.paper' }}
-            >
-              <ToggleButton value="liste" sx={{ px: 2 }}>Liste</ToggleButton>
-              <ToggleButton value="matrice" sx={{ px: 2 }}>Matrice</ToggleButton>
-            </ToggleButtonGroup>
           </Stack>
         </Paper>
 
@@ -297,21 +174,6 @@ function AdminUsersPage() {
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress />
           </Box>
-        ) : vue === 'matrice' ? (
-          <>
-            <PermissionsMatrix users={users} modules={modules} onToggle={debouncedToggle} />
-            <TablePagination
-              component="div"
-              count={matrixTotalElements}
-              page={matrixPage}
-              onPageChange={handleMatrixChangePage}
-              rowsPerPage={matrixRowsPerPage}
-              onRowsPerPageChange={handleMatrixChangeRowsPerPage}
-              rowsPerPageOptions={[20, 50, 100]}
-              labelRowsPerPage="Lignes par page:"
-              sx={{ borderTop: '1px solid', borderColor: 'divider', mt: 2, justifyContent: 'flex-end' }}
-            />
-          </>
         ) : (
           <TableContainer component={Paper} sx={{ borderRadius: 2.5, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
             <Table>
@@ -377,13 +239,15 @@ function AdminUsersPage() {
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
-                      <Button 
-                        size="small" 
+                      <Button
+                        size="small"
                         variant="outlined"
-                        onClick={() => setSelectedUser(u)}
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={() => setDeleteConfirmation(u)}
                         sx={{ borderRadius: 2, fontWeight: 600 }}
                       >
-                        Gérer Modules
+                        Supprimer
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -404,13 +268,29 @@ function AdminUsersPage() {
           </TableContainer>
         )}
       </Box>
-      <ModulesDialog 
-        open={Boolean(selectedUser)} 
-        user={selectedUser} 
-        allModules={modules}
-        onClose={() => setSelectedUser(null)}
-        onSave={saveModules}
-      />
+      
+      <Dialog open={Boolean(deleteConfirmation)} onClose={() => setDeleteConfirmation(null)}>
+        <DialogTitle>Supprimer l'utilisateur ?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Êtes-vous sûr de vouloir supprimer l'utilisateur <strong>{deleteConfirmation?.nomUtilisateur}</strong> ?
+            Cette action est irréversible.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmation(null)} disabled={deleting}>
+            Annuler
+          </Button>
+          <Button 
+            onClick={confirmDelete} 
+            variant="contained" 
+            color="error"
+            disabled={deleting}
+          >
+            {deleting ? 'Suppression...' : 'Supprimer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </AdminLayout>
   );
 }

@@ -26,14 +26,14 @@ export function AuthProvider({ children }) {
     definirGestionnaireEchecAuth(() => setUtilisateur(null));
   }, [chargerUtilisateurCourant]);
 
-  const connecter = async (nomUtilisateur, motDePasse) => {
-    const res = await axiosClient.post('/auth/login', { nomUtilisateur, motDePasse });
+  const connecter = async (identifiant, motDePasse) => {
+    const res = await axiosClient.post('/auth/login', { identifiant, motDePasse });
     setUtilisateur(res.data);
     return res.data;
   };
 
-  const inscrire = async (nomUtilisateur, motDePasse) => {
-    const res = await axiosClient.post('/auth/register', { nomUtilisateur, motDePasse });
+  const inscrire = async (nomUtilisateur, email, motDePasse) => {
+    const res = await axiosClient.post('/auth/register', { nomUtilisateur, email, motDePasse });
     setUtilisateur(res.data);
     return res.data;
   };
@@ -56,6 +56,20 @@ export function AuthProvider({ children }) {
     return res.data;
   };
 
+  const demanderResetMotDePasse = async (email) => {
+    await axiosClient.post('/auth/forgot-password', { email });
+  };
+
+  const reinitialiserMotDePasse = async (token, nouveauMotDePasse) => {
+    await axiosClient.post('/auth/reset-password', { token, nouveauMotDePasse });
+  };
+
+  const ajouterEmail = async (email) => {
+    const res = await axiosClient.patch('/auth/add-email', { email });
+    setUtilisateur(res.data);
+    return res.data;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -68,6 +82,9 @@ export function AuthProvider({ children }) {
         deconnecter,
         changerMotDePasse,
         changerNomUtilisateur,
+        demanderResetMotDePasse,
+        reinitialiserMotDePasse,
+        ajouterEmail,
       }}
     >
       {children}
